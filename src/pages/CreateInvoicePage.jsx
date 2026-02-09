@@ -14,6 +14,8 @@ export default function CreateInvoicePage() {
   const [formData, setFormData] = useState({
     number: '',
     date: new Date().toISOString().split('T')[0],
+    status: 'draft', // 'draft', 'confirmed', 'cancelled'
+    type: 'standard', // 'standard', 'proforma', 'credit_note'
     client: {
       name: '',
       phone: '',
@@ -25,9 +27,10 @@ export default function CreateInvoicePage() {
 
   const [currentItem, setCurrentItem] = useState({
     stockReferenceId: '',
+    reference: '', // Référence de l'article
     purchasePrice: null,
     description: '',
-    detailLines: [{ quantity: '', length: '', unit: 'm' }],
+    detailLines: [{ quantity: '', quantityUnit: 'feuilles', length: '', lengthUnit: 'm' }],
     totalQuantity: '',
     unit: 'm',
     unitPrice: ''
@@ -53,6 +56,8 @@ export default function CreateInvoicePage() {
       setFormData({
         number: invoice.number,
         date: invoice.date,
+        status: invoice.status || 'draft',
+        type: invoice.type || 'standard',
         client: invoice.client,
         items: invoice.items,
         notes: invoice.notes || ''
@@ -80,6 +85,7 @@ export default function CreateInvoicePage() {
       setCurrentItem({
         ...currentItem,
         stockReferenceId: stockId,
+        reference: item.reference || '',
         purchasePrice: item.purchasePrice || null,
         description: item.name,
         unit: item.purchaseUnit || 'pièce',
@@ -90,6 +96,7 @@ export default function CreateInvoicePage() {
       setCurrentItem({
         ...currentItem,
         stockReferenceId: '',
+        reference: '',
         purchasePrice: null
       })
     }
@@ -98,7 +105,7 @@ export default function CreateInvoicePage() {
   const addDetailLine = () => {
     setCurrentItem({
       ...currentItem,
-      detailLines: [...currentItem.detailLines, { quantity: '', length: '', unit: 'm' }]
+      detailLines: [...currentItem.detailLines, { quantity: '', quantityUnit: 'feuilles', length: '', lengthUnit: 'm' }]
     })
   }
 
@@ -106,7 +113,7 @@ export default function CreateInvoicePage() {
     const newLines = currentItem.detailLines.filter((_, i) => i !== index)
     setCurrentItem({
       ...currentItem,
-      detailLines: newLines.length > 0 ? newLines : [{ quantity: '', length: '', unit: 'm' }]
+      detailLines: newLines.length > 0 ? newLines : [{ quantity: '', quantityUnit: 'feuilles', length: '', lengthUnit: 'm' }]
     })
   }
 
@@ -121,15 +128,15 @@ export default function CreateInvoicePage() {
 
   const calculateLineTotal = (line) => {
     const qty = parseFloat(line.quantity) || 1
-    const len = parseFloat(line.length) || 1
-    return qty * len
+    const len = parseFloat(line.length) || 0
+    return len > 0 ? qty * len : qty
   }
 
   const calculateTotalFromLines = () => {
     if (currentItem.detailLines.length === 0) return 0
     return currentItem.detailLines.reduce((sum, line) => {
       // Si au moins un champ est rempli
-      if (line.quantity || line.length) {
+      if (line.quantity) {
         return sum + calculateLineTotal(line)
       }
       return sum
@@ -168,6 +175,12 @@ export default function CreateInvoicePage() {
       return
     }
 
+    // Vérifier si une référence est nécessaire
+    if (!currentItem.stockReferenceId && !currentItem.reference.trim()) {
+      const shouldContinue = confirm('⚠️ Aucune référence n\'est mentionnée. Voulez-vous continuer ?')
+      if (!shouldContinue) return
+    }
+
     // Calculer la quantité totale depuis les lignes de détails
     const totalFromLines = calculateTotalFromLines()
     const finalQuantity = totalFromLines > 0 ? totalFromLines : parseFloat(currentItem.totalQuantity) || 0
@@ -186,23 +199,31 @@ export default function CreateInvoicePage() {
 
     // Formater les lignes de détails pour l'affichage
     const formattedLines = currentItem.detailLines
-      .filter(line => line.quantity || line.length) // Garder seulement les lignes avec au moins un champ rempli
+      .filter(line => line.quantity) // Garder seulement les lignes avec quantité
       .map(line => {
         const qty = parseFloat(line.quantity) || 1
-        const len = parseFloat(line.length) || 1
-        const total = qty * len
+        const len = parseFloat(line.length) || 0
+        const total = len > 0 ? qty * len : qty
+        
+        let display = `${qty} ${line.quantityUnit || 'pièce'}`
+        if (len > 0) {
+          display += ` × ${len}${line.lengthUnit || 'm'} = ${total}${line.lengthUnit || 'm'}`
+        }
+        
         return {
           quantity: qty,
+          quantityUnit: line.quantityUnit || 'pièce',
           length: len,
-          unit: line.unit || 'm',
+          lengthUnit: line.lengthUnit || 'm',
           total: total,
-          display: `${qty} feuilles × ${len}${line.unit || 'm'} = ${total}${line.unit || 'm'}`
+          display: display
         }
       })
 
     const newItem = {
       id: Date.now(),
       stockReferenceId: currentItem.stockReferenceId || null,
+      reference: currentItem.reference || '',
       purchasePrice: currentItem.purchasePrice,
       description: currentItem.description,
       detailLines: formattedLines,
@@ -230,9 +251,10 @@ export default function CreateInvoicePage() {
     // Réinitialiser le formulaire
     setCurrentItem({
       stockReferenceId: '',
+      reference: '',
       purchasePrice: null,
       description: '',
-      detailLines: [{ quantity: '', length: '', unit: 'm' }],
+      detailLines: [{ quantity: '', quantityUnit: 'feuilles', length: '', lengthUnit: 'm' }],
       totalQuantity: '',
       unit: 'm',
       unitPrice: ''
@@ -246,15 +268,14 @@ export default function CreateInvoicePage() {
     })
   }
 
-  const calculateTotal = () => {
-    return formData.items.reduce((sum, item) => sum + item.total, 0)
-  }
+  const total = formData.items.reduce((sum, item) => sum + item.total, 0)
+  const marginInfo = calculateMargin()
 
   const handleSubmit = (e) => {
     e.preventDefault()
 
-    if (!formData.client.name) {
-      alert('❌ Veuillez saisir un client')
+    if (!formData.client.name.trim()) {
+      alert('❌ Veuillez saisir le nom du client')
       return
     }
 
@@ -263,49 +284,79 @@ export default function CreateInvoicePage() {
       return
     }
 
-    const invoice = {
+    const invoiceData = {
       ...formData,
-      total: calculateTotal()
+      total,
+      status: formData.status,
+      type: formData.type
     }
 
-    if (editId) {
-      DB.updateInvoice(editId, invoice)
-      alert('✅ Facture modifiée avec succès')
-    } else {
-      const savedInvoice = DB.addInvoice(invoice)
-      alert('✅ Facture créée avec succès')
-      navigate(`/preview/${savedInvoice.id}`)
-      return
+    try {
+      if (editId) {
+        DB.updateInvoice(editId, invoiceData)
+        alert('✅ Facture modifiée avec succès')
+      } else {
+        DB.addInvoice(invoiceData)
+        alert('✅ Facture créée avec succès')
+      }
+      navigate('/')
+    } catch (error) {
+      alert('❌ Erreur lors de l\'enregistrement')
+      console.error(error)
     }
-
-    navigate('/')
   }
 
-  const total = calculateTotal()
-  const marginInfo = calculateMargin()
+  const getInvoiceTypeLabel = (type) => {
+    const types = {
+      'standard': 'Facture',
+      'proforma': 'Facture Proforma',
+      'credit_note': 'Facture d\'Avoir'
+    }
+    return types[type] || 'Facture'
+  }
+
+  const getStatusLabel = (status) => {
+    const statuses = {
+      'draft': 'Brouillon',
+      'confirmed': 'Confirmée',
+      'cancelled': 'Annulée'
+    }
+    return statuses[status] || 'Brouillon'
+  }
+
+  const getStatusColor = (status) => {
+    const colors = {
+      'draft': '#ff9800',
+      'confirmed': '#4caf50',
+      'cancelled': '#f44336'
+    }
+    return colors[status] || '#999'
+  }
 
   return (
     <div className="container">
-      <h1>{editId ? '✏️ Modifier la Facture' : '✏️ Nouvelle Facture'}</h1>
+      <h1>{editId ? '✏️ Modifier la facture' : '➕ Nouvelle facture'}</h1>
 
       <form onSubmit={handleSubmit}>
+        {/* En-tête facture */}
         <div className="card">
           <h2>📋 Informations de la facture</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '15px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
             <div>
               <label style={{ display: 'block', marginBottom: '5px', fontWeight: '600' }}>
-                N° Facture
+                N° de facture <span style={{ color: 'red' }}>*</span>
               </label>
               <input
                 type="text"
                 value={formData.number}
                 onChange={(e) => setFormData({ ...formData, number: e.target.value })}
+                placeholder="FACT-2026-001"
                 required
               />
             </div>
             <div>
               <label style={{ display: 'block', marginBottom: '5px', fontWeight: '600' }}>
-                Date
+                Date <span style={{ color: 'red' }}>*</span>
               </label>
               <input
                 type="date"
@@ -314,32 +365,67 @@ export default function CreateInvoicePage() {
                 required
               />
             </div>
-          </div>
-        </div>
-
-        <div className="card">
-          <h2>👤 Informations Client</h2>
-          
-          {clients.length > 0 && (
-            <div style={{ marginBottom: '15px' }}>
+            <div>
               <label style={{ display: 'block', marginBottom: '5px', fontWeight: '600' }}>
-                Sélectionner un client existant
+                Type de facture
               </label>
               <select
-                onChange={(e) => e.target.value && selectClient(e.target.value)}
-                value=""
+                value={formData.type}
+                onChange={(e) => setFormData({ ...formData, type: e.target.value })}
               >
-                <option value="">-- Choisir un client --</option>
-                {clients.map(client => (
-                  <option key={client.id} value={client.id}>
-                    {client.name} {client.phone ? `(${client.phone})` : ''}
-                  </option>
-                ))}
+                <option value="standard">Facture</option>
+                <option value="proforma">Facture Proforma</option>
+                <option value="credit_note">Facture d'Avoir</option>
               </select>
             </div>
-          )}
+            <div>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: '600' }}>
+                Statut
+              </label>
+              <select
+                value={formData.status}
+                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                style={{ background: getStatusColor(formData.status), color: 'white', fontWeight: 'bold' }}
+              >
+                <option value="draft">📝 Brouillon</option>
+                <option value="confirmed">✅ Confirmée</option>
+                <option value="cancelled">❌ Annulée</option>
+              </select>
+            </div>
+          </div>
 
-          <div style={{ display: 'grid', gap: '15px' }}>
+          {formData.status === 'confirmed' && (
+            <div style={{ 
+              marginTop: '15px', 
+              padding: '12px', 
+              background: '#d4edda',
+              border: '1px solid #28a745',
+              color: '#155724',
+              borderRadius: '5px'
+            }}>
+              <strong>✅ Facture confirmée</strong> - Le stock sera automatiquement mis à jour lors de l'enregistrement
+            </div>
+          )}
+        </div>
+
+        {/* Informations client */}
+        <div className="card">
+          <h2>👤 Client</h2>
+          <div style={{ marginBottom: '15px' }}>
+            <label style={{ display: 'block', marginBottom: '5px', fontWeight: '600' }}>
+              Sélectionner un client existant
+            </label>
+            <select onChange={(e) => selectClient(e.target.value)} defaultValue="">
+              <option value="">-- Nouveau client --</option>
+              {clients.map(client => (
+                <option key={client.id} value={client.id}>
+                  {client.name} {client.phone && `(${client.phone})`}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '15px', marginBottom: '15px' }}>
             <div>
               <label style={{ display: 'block', marginBottom: '5px', fontWeight: '600' }}>
                 Nom <span style={{ color: 'red' }}>*</span>
@@ -347,8 +433,8 @@ export default function CreateInvoicePage() {
               <input
                 type="text"
                 value={formData.client.name}
-                onChange={(e) => setFormData({
-                  ...formData,
+                onChange={(e) => setFormData({ 
+                  ...formData, 
                   client: { ...formData.client, name: e.target.value }
                 })}
                 placeholder="Nom du client"
@@ -362,118 +448,169 @@ export default function CreateInvoicePage() {
               <input
                 type="tel"
                 value={formData.client.phone}
-                onChange={(e) => setFormData({
-                  ...formData,
+                onChange={(e) => setFormData({ 
+                  ...formData, 
                   client: { ...formData.client, phone: e.target.value }
                 })}
-                placeholder="0XX XX XXX XX"
+                placeholder="0345476294"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label style={{ display: 'block', marginBottom: '5px', fontWeight: '600' }}>
+              Adresse
+            </label>
+            <input
+              type="text"
+              value={formData.client.address}
+              onChange={(e) => setFormData({ 
+                ...formData, 
+                client: { ...formData.client, address: e.target.value }
+              })}
+              placeholder="Adresse du client"
+            />
+          </div>
+        </div>
+
+        {/* Ajouter un article */}
+        <div className="card" style={{ background: '#2a2a2a' }}>
+          <h2>➕ Ajouter un article</h2>
+          
+          <div style={{ marginBottom: '15px' }}>
+            <label style={{ display: 'block', marginBottom: '5px', fontWeight: '600' }}>
+              Sélectionner depuis le stock (optionnel)
+            </label>
+            <select 
+              onChange={(e) => selectStockItem(e.target.value)}
+              value={currentItem.stockReferenceId}
+              defaultValue=""
+            >
+              <option value="">-- Nouvel article --</option>
+              {stock.map(item => {
+                const qty = item.quantityAvailable || item.quantity || 0
+                const isLow = item.minQuantity > 0 && qty <= item.minQuantity
+                return (
+                  <option key={item.id} value={item.id}>
+                    {item.name} {item.reference && `(Réf: ${item.reference})`} - Stock: {qty} {item.purchaseUnit || item.unit}
+                    {isLow && ' ⚠️ Stock bas'}
+                  </option>
+                )
+              })}
+            </select>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '15px', marginBottom: '15px' }}>
+            <div>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: '600' }}>
+                Désignation <span style={{ color: 'red' }}>*</span>
+              </label>
+              <input
+                type="text"
+                value={currentItem.description}
+                onChange={(e) => setCurrentItem({ ...currentItem, description: e.target.value })}
+                placeholder="Description de l'article"
               />
             </div>
             <div>
               <label style={{ display: 'block', marginBottom: '5px', fontWeight: '600' }}>
-                Adresse
+                Référence
               </label>
-              <textarea
-                value={formData.client.address}
-                onChange={(e) => setFormData({
-                  ...formData,
-                  client: { ...formData.client, address: e.target.value }
-                })}
-                placeholder="Adresse du client"
-                rows="2"
+              <input
+                type="text"
+                value={currentItem.reference}
+                onChange={(e) => setCurrentItem({ ...currentItem, reference: e.target.value })}
+                placeholder="Réf. article"
               />
             </div>
           </div>
-        </div>
 
-        <div className="card">
-          <h2>📦 Ajouter un Article</h2>
-          
-          {stock.length > 0 && (
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '5px', fontWeight: '600' }}>
-                💡 Référence stock (optionnel - pour calculer la marge)
-              </label>
-              <select
-                value={currentItem.stockReferenceId}
-                onChange={(e) => selectStockItem(e.target.value)}
-              >
-                <option value="">-- Article libre (sans référence) --</option>
-                {stock.map(item => (
-                  <option key={item.id} value={item.id}>
-                    {item.name} - {formatNumber(item.purchasePrice || 0)} Ar/{item.purchaseUnit}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: '600' }}>
-              📋 Désignation (libellé facture) <span style={{ color: 'red' }}>*</span>
-            </label>
-            <input
-              type="text"
-              value={currentItem.description}
-              onChange={(e) => setCurrentItem({ ...currentItem, description: e.target.value })}
-              placeholder="Ex: TÔLE BAC 0.30 ROUGE (Pré-laqué)"
-            />
-          </div>
-
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '10px', fontWeight: '600' }}>
-              📏 Détails / Lignes (optionnel)
-            </label>
-            <div style={{ background: '#1a1a1a', padding: '15px', borderRadius: '5px', border: '1px solid #333' }}>
+          {/* Lignes de détails */}
+          <div style={{ background: '#1a1a1a', padding: '15px', borderRadius: '8px', marginBottom: '15px' }}>
+            <h3 style={{ marginBottom: '15px', fontSize: '1em' }}>📐 Détails (optionnel)</h3>
+            
+            <div>
               {currentItem.detailLines.map((line, index) => {
+                const hasQuantity = line.quantity !== ''
+                const hasLength = line.length !== ''
                 const lineTotal = calculateLineTotal(line)
-                const hasValues = line.quantity || line.length
                 
                 return (
-                  <div key={index} style={{ marginBottom: '15px', padding: '10px', background: '#2a2a2a', borderRadius: '5px' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 100px auto', gap: '10px', alignItems: 'center' }}>
+                  <div 
+                    key={index} 
+                    style={{ 
+                      marginBottom: '15px', 
+                      paddingBottom: '15px',
+                      borderBottom: index < currentItem.detailLines.length - 1 ? '1px solid #333' : 'none'
+                    }}
+                  >
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr auto', gap: '10px', alignItems: 'end' }}>
                       <div>
-                        <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9em', color: '#999' }}>
+                        <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9em' }}>
                           Nombre
                         </label>
                         <input
                           type="number"
                           value={line.quantity}
                           onChange={(e) => updateDetailLine(index, 'quantity', e.target.value)}
-                          placeholder="12"
+                          placeholder="1"
                           step="0.01"
                           min="0"
-                          style={{ width: '100%' }}
+                          style={{ fontSize: '0.9em' }}
                         />
                       </div>
-                      
+
                       <div>
-                        <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9em', color: '#999' }}>
-                          Taille
+                        <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9em' }}>
+                          Unité
+                        </label>
+                        <select
+                          value={line.quantityUnit}
+                          onChange={(e) => updateDetailLine(index, 'quantityUnit', e.target.value)}
+                          style={{ fontSize: '0.9em' }}
+                        >
+                          <option value="feuilles">feuilles</option>
+                          <option value="pièces">pièces</option>
+                          <option value="sacs">sacs</option>
+                          <option value="paquets">paquets</option>
+                          <option value="sachets">sachets</option>
+                          <option value="cartons">cartons</option>
+                          <option value="unités">unités</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9em' }}>
+                          Taille (optionnel)
                         </label>
                         <input
                           type="number"
                           value={line.length}
                           onChange={(e) => updateDetailLine(index, 'length', e.target.value)}
-                          placeholder="2.5"
+                          placeholder="0"
                           step="0.01"
                           min="0"
-                          style={{ width: '100%' }}
+                          style={{ fontSize: '0.9em' }}
                         />
                       </div>
 
                       <div>
-                        <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9em', color: '#999' }}>
-                          Unité
+                        <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9em' }}>
+                          Unité taille
                         </label>
                         <select
-                          value={line.unit}
-                          onChange={(e) => updateDetailLine(index, 'unit', e.target.value)}
-                          style={{ width: '100%' }}
+                          value={line.lengthUnit}
+                          onChange={(e) => updateDetailLine(index, 'lengthUnit', e.target.value)}
+                          style={{ fontSize: '0.9em' }}
+                          disabled={!line.length}
                         >
                           <option value="m">m</option>
                           <option value="cm">cm</option>
                           <option value="mm">mm</option>
+                          <option value="kg">kg</option>
+                          <option value="g">g</option>
+                          <option value="L">L</option>
+                          <option value="mL">mL</option>
                         </select>
                       </div>
 
@@ -491,7 +628,7 @@ export default function CreateInvoicePage() {
                       </div>
                     </div>
                     
-                    {hasValues && (
+                    {hasQuantity && (
                       <div style={{ 
                         marginTop: '8px', 
                         padding: '8px', 
@@ -500,7 +637,8 @@ export default function CreateInvoicePage() {
                         fontSize: '0.9em',
                         color: '#4caf50'
                       }}>
-                        Aperçu: {parseFloat(line.quantity) || 1} feuilles × {parseFloat(line.length) || 1}{line.unit} = {lineTotal}{line.unit}
+                        Aperçu: {parseFloat(line.quantity) || 1} {line.quantityUnit}
+                        {hasLength && ` × ${parseFloat(line.length)}${line.lengthUnit} = ${lineTotal}${line.lengthUnit}`}
                       </div>
                     )}
                   </div>
@@ -638,6 +776,11 @@ export default function CreateInvoicePage() {
                   <tr key={item.id}>
                     <td>
                       <div style={{ fontWeight: 'bold' }}>{item.description}</div>
+                      {item.reference && (
+                        <div style={{ fontSize: '0.85em', color: '#4caf50', marginTop: '3px' }}>
+                          Réf: {item.reference}
+                        </div>
+                      )}
                       {item.detailLines && item.detailLines.length > 0 && (
                         <div style={{ fontSize: '0.9em', color: '#999', marginTop: '5px' }}>
                           {item.detailLines.map((line, idx) => (

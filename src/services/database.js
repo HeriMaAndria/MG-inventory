@@ -23,7 +23,8 @@ export const DB = {
         companyAddress: 'Près Lavage Raitra',
         companyStat: '47521201201901044',
         companyNif: '6003278760',
-        companyPhone: '0345476294 / 0389015842'
+        companyPhone: '0345476294 / 0389015842',
+        responsibleNumber: ''
       }))
     }
   },
@@ -43,6 +44,14 @@ export const DB = {
     invoice.id = this.generateId()
     invoice.createdAt = new Date().toISOString()
     invoice.updatedAt = new Date().toISOString()
+    invoice.status = invoice.status || 'draft' // 'draft', 'confirmed', 'cancelled'
+    invoice.type = invoice.type || 'standard' // 'standard', 'proforma', 'credit_note'
+    
+    // Si la facture est confirmée, mettre à jour le stock
+    if (invoice.status === 'confirmed') {
+      this.updateStockFromInvoice(invoice)
+    }
+    
     invoices.push(invoice)
     this.saveInvoices(invoices)
     this.updateOrAddClient(invoice.client)
@@ -53,9 +62,22 @@ export const DB = {
     const invoices = this.getInvoices()
     const index = invoices.findIndex(inv => inv.id === id)
     if (index !== -1) {
+      const oldInvoice = invoices[index]
       updatedInvoice.id = id
       updatedInvoice.updatedAt = new Date().toISOString()
       updatedInvoice.createdAt = invoices[index].createdAt
+      updatedInvoice.status = updatedInvoice.status || oldInvoice.status || 'draft'
+      updatedInvoice.type = updatedInvoice.type || oldInvoice.type || 'standard'
+      
+      // Si le statut passe de draft/cancelled à confirmed, mettre à jour le stock
+      if (updatedInvoice.status === 'confirmed' && oldInvoice.status !== 'confirmed') {
+        this.updateStockFromInvoice(updatedInvoice)
+      }
+      // Si le statut passe de confirmed à draft/cancelled, restaurer le stock
+      else if (oldInvoice.status === 'confirmed' && updatedInvoice.status !== 'confirmed') {
+        this.restoreStockFromInvoice(oldInvoice)
+      }
+      
       invoices[index] = updatedInvoice
       this.saveInvoices(invoices)
       this.updateOrAddClient(updatedInvoice.client)
@@ -204,6 +226,82 @@ export const DB = {
     const filtered = stock.filter(s => s.id !== id)
     this.saveStock(filtered)
     return true
+  },
+
+  // Méthode pour mettre à jour le stock lors de la confirmation de facture
+  updateStockFromInvoice(invoice) {
+    const stock = this.getStock()
+    let updated = false
+    
+    invoice.items.forEach(item => {
+      if (item.stockReferenceId) {
+        const stockIndex = stock.findIndex(s => s.id === item.stockReferenceId)
+        if (stockIndex !== -1) {
+          const currentQty = stock[stockIndex].quantityAvailable || 0
+          stock[stockIndex].quantityAvailable = Math.max(0, currentQty - item.quantity)
+          stock[stockIndex].quantity = stock[stockIndex].quantityAvailable
+          stock[stockIndex].lastUpdated = new Date().toISOString()
+          updated = true
+        }
+      }
+    })
+    
+    if (updated) {
+      this.saveStock(stock)
+    }
+  },
+
+  // Méthode pour restaurer le stock si la facture est annulée
+  restoreStockFromInvoice(invoice) {
+    const stock = this.getStock()
+    let updated = false
+    
+    invoice.items.forEach(item => {
+      if (item.stockReferenceId) {
+        const stockIndex = stock.findIndex(s => s.id === item.stockReferenceId)
+        if (stockIndex !== -1) {
+          const currentQty = stock[stockIndex].quantityAvailable || 0
+          stock[stockIndex].quantityAvailable = currentQty + item.quantity
+          stock[stockIndex].quantity = stock[stockIndex].quantityAvailable
+          stock[stockIndex].lastUpdated = new Date().toISOString()
+          updated = true
+        }
+      }
+    })
+    
+    if (updated) {
+      this.saveStock(stock)
+    }
+  },
+
+  // Méthode pour ajouter de la quantité à un article existant
+  addQuantityToStock(id, quantityToAdd) {
+    const stock = this.getStock()
+    const index = stock.findIndex(s => s.id === id)
+    if (index !== -1) {
+      const currentQty = stock[index].quantityAvailable || 0
+      stock[index].quantityAvailable = currentQty + parseFloat(quantityToAdd)
+      stock[index].quantity = stock[index].quantityAvailable
+      stock[index].lastUpdated = new Date().toISOString()
+      this.saveStock(stock)
+      return true
+    }
+    return false
+  },
+
+  // Méthode pour confirmer une facture
+  confirmInvoice(id) {
+    const invoices = this.getInvoices()
+    const index = invoices.findIndex(inv => inv.id === id)
+    if (index !== -1 && invoices[index].status === 'draft') {
+      invoices[index].status = 'confirmed'
+      invoices[index].confirmedAt = new Date().toISOString()
+      invoices[index].updatedAt = new Date().toISOString()
+      this.updateStockFromInvoice(invoices[index])
+      this.saveInvoices(invoices)
+      return true
+    }
+    return false
   },
 
   // SETTINGS

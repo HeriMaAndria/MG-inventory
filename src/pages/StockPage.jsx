@@ -5,7 +5,10 @@ import { formatNumber } from '../utils/formatters'
 export default function StockPage() {
   const [stock, setStock] = useState([])
   const [showModal, setShowModal] = useState(false)
+  const [showAddQuantityModal, setShowAddQuantityModal] = useState(false)
   const [editingItem, setEditingItem] = useState(null)
+  const [addingQuantityItem, setAddingQuantityItem] = useState(null)
+  const [quantityToAdd, setQuantityToAdd] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [formData, setFormData] = useState({
     category: 'AUTRE',
@@ -62,6 +65,34 @@ export default function StockPage() {
   const closeModal = () => {
     setShowModal(false)
     setEditingItem(null)
+  }
+
+  const openAddQuantityModal = (item) => {
+    setAddingQuantityItem(item)
+    setQuantityToAdd('')
+    setShowAddQuantityModal(true)
+  }
+
+  const closeAddQuantityModal = () => {
+    setShowAddQuantityModal(false)
+    setAddingQuantityItem(null)
+    setQuantityToAdd('')
+  }
+
+  const handleAddQuantity = () => {
+    if (!quantityToAdd || parseFloat(quantityToAdd) <= 0) {
+      alert('❌ Veuillez saisir une quantité valide')
+      return
+    }
+
+    const success = DB.addQuantityToStock(addingQuantityItem.id, parseFloat(quantityToAdd))
+    if (success) {
+      alert(`✅ ${quantityToAdd} ${addingQuantityItem.purchaseUnit || addingQuantityItem.unit} ajouté(s) à ${addingQuantityItem.name}`)
+      loadStock()
+      closeAddQuantityModal()
+    } else {
+      alert('❌ Erreur lors de l\'ajout de quantité')
+    }
   }
 
   const handleSubmit = (e) => {
@@ -154,8 +185,17 @@ export default function StockPage() {
               const qty = item.quantityAvailable || item.quantity || 0
               const min = item.minQuantity || 0
               return (
-                <div key={item.id} style={{ padding: '5px 0', borderBottom: '1px solid #444' }}>
-                  <strong>{item.name}</strong> : {qty} {item.purchaseUnit || item.unit} (minimum : {min})
+                <div key={item.id} style={{ padding: '5px 0', borderBottom: '1px solid #444', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>
+                    <strong>{item.name}</strong> : {qty} {item.purchaseUnit || item.unit} (minimum : {min})
+                  </span>
+                  <button 
+                    className="btn btn-primary"
+                    style={{ padding: '4px 10px', fontSize: '0.85em' }}
+                    onClick={() => openAddQuantityModal(item)}
+                  >
+                    + Ajouter
+                  </button>
                 </div>
               )
             })}
@@ -208,7 +248,7 @@ export default function StockPage() {
                 <th>Prix d'achat</th>
                 <th>Disponible</th>
                 <th>Statut</th>
-                <th>Actions</th>
+                <th style={{ width: '200px' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -254,20 +294,32 @@ export default function StockPage() {
                       )}
                     </td>
                     <td>
-                      <button 
-                        className="btn btn-secondary" 
-                        style={{ padding: '6px 12px', marginRight: '5px' }}
-                        onClick={() => openModal(item)}
-                      >
-                        ✏️
-                      </button>
-                      <button 
-                        className="btn btn-danger" 
-                        style={{ padding: '6px 12px' }}
-                        onClick={() => deleteItem(item.id, item.name)}
-                      >
-                        🗑️
-                      </button>
+                      <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                        <button 
+                          className="btn btn-primary" 
+                          style={{ padding: '6px 12px', fontSize: '0.85em' }}
+                          onClick={() => openAddQuantityModal(item)}
+                          title="Ajouter de la quantité"
+                        >
+                          + Qté
+                        </button>
+                        <button 
+                          className="btn btn-secondary" 
+                          style={{ padding: '6px 12px' }}
+                          onClick={() => openModal(item)}
+                          title="Modifier"
+                        >
+                          ✏️
+                        </button>
+                        <button 
+                          className="btn btn-danger" 
+                          style={{ padding: '6px 12px' }}
+                          onClick={() => deleteItem(item.id, item.name)}
+                          title="Supprimer"
+                        >
+                          🗑️
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 )
@@ -277,6 +329,7 @@ export default function StockPage() {
         )}
       </div>
 
+      {/* Modal d'ajout/modification d'article */}
       {showModal && (
         <div style={{
           position: 'fixed',
@@ -446,6 +499,81 @@ export default function StockPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal d'ajout de quantité rapide */}
+      {showAddQuantityModal && addingQuantityItem && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1001,
+          padding: '20px'
+        }}>
+          <div className="card" style={{ width: '90%', maxWidth: '400px' }}>
+            <h2>➕ Ajouter de la quantité</h2>
+            <div style={{ marginBottom: '15px' }}>
+              <p style={{ color: '#999', marginBottom: '10px' }}>
+                Article: <strong>{addingQuantityItem.name}</strong>
+              </p>
+              <p style={{ color: '#999', marginBottom: '15px' }}>
+                Stock actuel: <strong>{addingQuantityItem.quantityAvailable || addingQuantityItem.quantity || 0} {addingQuantityItem.purchaseUnit || addingQuantityItem.unit}</strong>
+              </p>
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: '600' }}>
+                Quantité à ajouter <span style={{ color: 'red' }}>*</span>
+              </label>
+              <input
+                type="number"
+                value={quantityToAdd}
+                onChange={(e) => setQuantityToAdd(e.target.value)}
+                placeholder={`Nombre de ${addingQuantityItem.purchaseUnit || addingQuantityItem.unit}`}
+                step="0.01"
+                min="0.01"
+                autoFocus
+              />
+            </div>
+
+            {quantityToAdd && parseFloat(quantityToAdd) > 0 && (
+              <div style={{ 
+                padding: '10px',
+                background: '#2a4a2a',
+                borderRadius: '5px',
+                marginBottom: '15px',
+                color: '#4caf50'
+              }}>
+                Nouveau stock: <strong>
+                  {(parseFloat(addingQuantityItem.quantityAvailable || addingQuantityItem.quantity || 0) + parseFloat(quantityToAdd)).toFixed(2)} {addingQuantityItem.purchaseUnit || addingQuantityItem.unit}
+                </strong>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button 
+                className="btn btn-primary" 
+                onClick={handleAddQuantity}
+                style={{ flex: 1 }}
+              >
+                ✅ Confirmer
+              </button>
+              <button 
+                className="btn btn-secondary" 
+                onClick={closeAddQuantityModal}
+                style={{ flex: 1 }}
+              >
+                ❌ Annuler
+              </button>
+            </div>
           </div>
         </div>
       )}
