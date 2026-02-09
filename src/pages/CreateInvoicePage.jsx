@@ -27,9 +27,9 @@ export default function CreateInvoicePage() {
     stockReferenceId: '',
     purchasePrice: null,
     description: '',
-    detailLines: [{ text: '' }],
-    quantity: '',
-    unit: 'mètre',
+    detailLines: [{ quantity: '', length: '', unit: 'm' }],
+    totalQuantity: '',
+    unit: 'm',
     unitPrice: ''
   })
 
@@ -98,7 +98,7 @@ export default function CreateInvoicePage() {
   const addDetailLine = () => {
     setCurrentItem({
       ...currentItem,
-      detailLines: [...currentItem.detailLines, { text: '' }]
+      detailLines: [...currentItem.detailLines, { quantity: '', length: '', unit: 'm' }]
     })
   }
 
@@ -106,25 +106,46 @@ export default function CreateInvoicePage() {
     const newLines = currentItem.detailLines.filter((_, i) => i !== index)
     setCurrentItem({
       ...currentItem,
-      detailLines: newLines.length > 0 ? newLines : [{ text: '' }]
+      detailLines: newLines.length > 0 ? newLines : [{ quantity: '', length: '', unit: 'm' }]
     })
   }
 
-  const updateDetailLine = (index, value) => {
+  const updateDetailLine = (index, field, value) => {
     const newLines = [...currentItem.detailLines]
-    newLines[index] = { text: value }
+    newLines[index] = { ...newLines[index], [field]: value }
     setCurrentItem({
       ...currentItem,
       detailLines: newLines
     })
   }
 
+  const calculateLineTotal = (line) => {
+    const qty = parseFloat(line.quantity) || 1
+    const len = parseFloat(line.length) || 1
+    return qty * len
+  }
+
+  const calculateTotalFromLines = () => {
+    if (currentItem.detailLines.length === 0) return 0
+    return currentItem.detailLines.reduce((sum, line) => {
+      // Si au moins un champ est rempli
+      if (line.quantity || line.length) {
+        return sum + calculateLineTotal(line)
+      }
+      return sum
+    }, 0)
+  }
+
   const calculateMargin = () => {
-    if (!currentItem.purchasePrice || !currentItem.quantity || !currentItem.unitPrice) {
+    if (!currentItem.purchasePrice || !currentItem.unitPrice) {
       return null
     }
 
-    const quantity = parseFloat(currentItem.quantity)
+    const totalFromLines = calculateTotalFromLines()
+    const quantity = totalFromLines > 0 ? totalFromLines : parseFloat(currentItem.totalQuantity) || 0
+
+    if (quantity === 0) return null
+
     const unitPrice = parseFloat(currentItem.unitPrice)
     const purchasePrice = parseFloat(currentItem.purchasePrice)
 
@@ -147,35 +168,58 @@ export default function CreateInvoicePage() {
       return
     }
 
-    if (!currentItem.quantity || !currentItem.unitPrice) {
-      alert('❌ Veuillez saisir la quantité et le prix unitaire')
+    // Calculer la quantité totale depuis les lignes de détails
+    const totalFromLines = calculateTotalFromLines()
+    const finalQuantity = totalFromLines > 0 ? totalFromLines : parseFloat(currentItem.totalQuantity) || 0
+
+    if (finalQuantity === 0) {
+      alert('❌ Veuillez saisir la quantité totale ou au moins une ligne de détails')
       return
     }
 
-    const quantity = parseFloat(currentItem.quantity)
+    if (!currentItem.unitPrice) {
+      alert('❌ Veuillez saisir le prix unitaire')
+      return
+    }
+
     const unitPrice = parseFloat(currentItem.unitPrice)
 
-    // Filtrer les lignes de détails non vides
-    const validDetailLines = currentItem.detailLines.filter(line => line.text.trim())
+    // Formater les lignes de détails pour l'affichage
+    const formattedLines = currentItem.detailLines
+      .filter(line => line.quantity || line.length) // Garder seulement les lignes avec au moins un champ rempli
+      .map(line => {
+        const qty = parseFloat(line.quantity) || 1
+        const len = parseFloat(line.length) || 1
+        const total = qty * len
+        return {
+          quantity: qty,
+          length: len,
+          unit: line.unit || 'm',
+          total: total,
+          display: `${qty} feuilles × ${len}${line.unit || 'm'} = ${total}${line.unit || 'm'}`
+        }
+      })
 
     const newItem = {
       id: Date.now(),
       stockReferenceId: currentItem.stockReferenceId || null,
       purchasePrice: currentItem.purchasePrice,
       description: currentItem.description,
-      detailLines: validDetailLines,
-      quantity,
+      detailLines: formattedLines,
+      quantity: finalQuantity,
       unit: currentItem.unit,
       unitPrice,
-      total: quantity * unitPrice
+      total: finalQuantity * unitPrice
     }
 
     // Calculer la marge si applicable
     if (currentItem.purchasePrice) {
       const marginData = calculateMargin()
-      newItem.purchaseCost = marginData.purchaseCost
-      newItem.margin = marginData.margin
-      newItem.marginPercent = marginData.marginPercent
+      if (marginData) {
+        newItem.purchaseCost = finalQuantity * currentItem.purchasePrice
+        newItem.margin = newItem.total - newItem.purchaseCost
+        newItem.marginPercent = (newItem.margin / newItem.purchaseCost) * 100
+      }
     }
 
     setFormData({
@@ -188,9 +232,9 @@ export default function CreateInvoicePage() {
       stockReferenceId: '',
       purchasePrice: null,
       description: '',
-      detailLines: [{ text: '' }],
-      quantity: '',
-      unit: 'mètre',
+      detailLines: [{ quantity: '', length: '', unit: 'm' }],
+      totalQuantity: '',
+      unit: 'm',
       unitPrice: ''
     })
   }
@@ -381,51 +425,136 @@ export default function CreateInvoicePage() {
               📏 Détails / Lignes (optionnel)
             </label>
             <div style={{ background: '#1a1a1a', padding: '15px', borderRadius: '5px', border: '1px solid #333' }}>
-              {currentItem.detailLines.map((line, index) => (
-                <div key={index} style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
-                  <input
-                    type="text"
-                    value={line.text}
-                    onChange={(e) => updateDetailLine(index, e.target.value)}
-                    placeholder={`Ligne ${index + 1}: Ex: 12 feuilles × 2.5m = 30m`}
-                    style={{ flex: 1 }}
-                  />
-                  {currentItem.detailLines.length > 1 && (
-                    <button
-                      type="button"
-                      className="btn btn-danger"
-                      onClick={() => removeDetailLine(index)}
-                      style={{ padding: '8px 15px' }}
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
-              ))}
+              {currentItem.detailLines.map((line, index) => {
+                const lineTotal = calculateLineTotal(line)
+                const hasValues = line.quantity || line.length
+                
+                return (
+                  <div key={index} style={{ marginBottom: '15px', padding: '10px', background: '#2a2a2a', borderRadius: '5px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 100px auto', gap: '10px', alignItems: 'center' }}>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9em', color: '#999' }}>
+                          Nombre
+                        </label>
+                        <input
+                          type="number"
+                          value={line.quantity}
+                          onChange={(e) => updateDetailLine(index, 'quantity', e.target.value)}
+                          placeholder="12"
+                          step="0.01"
+                          min="0"
+                          style={{ width: '100%' }}
+                        />
+                      </div>
+                      
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9em', color: '#999' }}>
+                          Taille
+                        </label>
+                        <input
+                          type="number"
+                          value={line.length}
+                          onChange={(e) => updateDetailLine(index, 'length', e.target.value)}
+                          placeholder="2.5"
+                          step="0.01"
+                          min="0"
+                          style={{ width: '100%' }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9em', color: '#999' }}>
+                          Unité
+                        </label>
+                        <select
+                          value={line.unit}
+                          onChange={(e) => updateDetailLine(index, 'unit', e.target.value)}
+                          style={{ width: '100%' }}
+                        >
+                          <option value="m">m</option>
+                          <option value="cm">cm</option>
+                          <option value="mm">mm</option>
+                        </select>
+                      </div>
+
+                      <div style={{ paddingTop: '20px' }}>
+                        {currentItem.detailLines.length > 1 && (
+                          <button
+                            type="button"
+                            className="btn btn-danger"
+                            onClick={() => removeDetailLine(index)}
+                            style={{ padding: '8px 15px' }}
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {hasValues && (
+                      <div style={{ 
+                        marginTop: '8px', 
+                        padding: '8px', 
+                        background: '#1a1a1a',
+                        borderRadius: '3px',
+                        fontSize: '0.9em',
+                        color: '#4caf50'
+                      }}>
+                        Aperçu: {parseFloat(line.quantity) || 1} feuilles × {parseFloat(line.length) || 1}{line.unit} = {lineTotal}{line.unit}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+              
               <button
                 type="button"
                 className="btn btn-secondary"
                 onClick={addDetailLine}
-                style={{ padding: '8px 15px', fontSize: '0.9em' }}
+                style={{ padding: '8px 15px', fontSize: '0.9em', marginTop: '10px' }}
               >
                 + Ajouter une ligne
               </button>
+
+              {calculateTotalFromLines() > 0 && (
+                <div style={{ 
+                  marginTop: '15px', 
+                  padding: '12px', 
+                  background: '#2a4a2a',
+                  borderRadius: '5px',
+                  fontWeight: 'bold',
+                  color: '#4caf50'
+                }}>
+                  Total calculé depuis les lignes: {calculateTotalFromLines()} {currentItem.unit}
+                </div>
+              )}
             </div>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '15px', marginBottom: '15px' }}>
             <div>
               <label style={{ display: 'block', marginBottom: '5px', fontWeight: '600' }}>
-                Quantité totale <span style={{ color: 'red' }}>*</span>
+                Quantité totale {calculateTotalFromLines() === 0 && <span style={{ color: 'red' }}>*</span>}
               </label>
               <input
                 type="number"
-                value={currentItem.quantity}
-                onChange={(e) => setCurrentItem({ ...currentItem, quantity: e.target.value })}
-                placeholder="0"
+                value={currentItem.totalQuantity}
+                onChange={(e) => setCurrentItem({ ...currentItem, totalQuantity: e.target.value })}
+                placeholder={calculateTotalFromLines() > 0 ? `Auto: ${calculateTotalFromLines()}` : "0"}
                 step="0.01"
                 min="0"
+                disabled={calculateTotalFromLines() > 0}
+                style={{ 
+                  background: calculateTotalFromLines() > 0 ? '#2a2a2a' : '#1a1a1a',
+                  cursor: calculateTotalFromLines() > 0 ? 'not-allowed' : 'text'
+                }}
               />
+              <small style={{ color: '#999', fontSize: '0.85em' }}>
+                {calculateTotalFromLines() > 0 
+                  ? 'Calculé automatiquement depuis les lignes' 
+                  : 'Ou remplir les lignes de détails ci-dessus'
+                }
+              </small>
             </div>
             <div>
               <label style={{ display: 'block', marginBottom: '5px', fontWeight: '600' }}>Unité</label>
@@ -433,11 +562,11 @@ export default function CreateInvoicePage() {
                 value={currentItem.unit}
                 onChange={(e) => setCurrentItem({ ...currentItem, unit: e.target.value })}
               >
-                <option value="mètre">mètre (m)</option>
+                <option value="m">m</option>
                 <option value="pièce">pièce</option>
-                <option value="kg">kilogramme (kg)</option>
-                <option value="m²">mètre carré (m²)</option>
-                <option value="m³">mètre cube (m³)</option>
+                <option value="kg">kg</option>
+                <option value="m²">m²</option>
+                <option value="m³">m³</option>
                 <option value="litre">litre</option>
                 <option value="sac">sac</option>
                 <option value="paquet">paquet</option>
@@ -509,10 +638,10 @@ export default function CreateInvoicePage() {
                   <tr key={item.id}>
                     <td>
                       <div style={{ fontWeight: 'bold' }}>{item.description}</div>
-                      {item.detailLines.length > 0 && (
+                      {item.detailLines && item.detailLines.length > 0 && (
                         <div style={{ fontSize: '0.9em', color: '#999', marginTop: '5px' }}>
                           {item.detailLines.map((line, idx) => (
-                            <div key={idx}>• {line.text}</div>
+                            <div key={idx}>• {line.display}</div>
                           ))}
                         </div>
                       )}
