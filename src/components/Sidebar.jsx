@@ -10,6 +10,7 @@ export default function Sidebar({ isCollapsed, onToggle }) {
     { path: '/create', icon: '✏️', label: 'Nouvelle facture' },
     { path: '/clients', icon: '👥', label: 'Clients' },
     { path: '/stock', icon: '📦', label: 'Stock' },
+    { path: '/settings', icon: '⚙️', label: 'Paramètres' },
   ]
 
   const handleLinkClick = () => {
@@ -36,7 +37,7 @@ export default function Sidebar({ isCollapsed, onToggle }) {
       <aside className={sidebarClasses}>
         {/* Header */}
         <div className="sidebar__header">
-          <div className="sidebar__brand">📋 Factures Pro</div>
+          <div className="sidebar__brand">📋 MG-Inventory</div>
           <button
             className="sidebar__toggle"
             onClick={onToggle}
@@ -74,8 +75,8 @@ export default function Sidebar({ isCollapsed, onToggle }) {
         {/* Footer */}
         {!isCollapsed && (
           <div className="sidebar__footer">
-            <p>© 2026 Factures Pro</p>
-            <p className="u-text-sm u-text-secondary">v1.0.0</p>
+            <p>© 2026 MG-Inventory</p>
+            <p className="u-text-sm u-text-secondary">v2.0.0</p>
           </div>
         )}
       </aside>

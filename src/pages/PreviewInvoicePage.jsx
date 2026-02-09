@@ -176,6 +176,7 @@ export default function PreviewInvoicePage() {
                   {settings.companyNif && <div>NIF: {settings.companyNif}</div>}
                 </div>
                 {settings.companyPhone && <div style={{ marginTop: '2mm' }}>Tél: {settings.companyPhone}</div>}
+                {settings.responsibleNumber && <div>Responsable: {settings.responsibleNumber}</div>}
               </div>
             </div>
 
@@ -188,11 +189,27 @@ export default function PreviewInvoicePage() {
                 border: '1px solid #000'
               }}>
                 <div style={{ fontWeight: 'bold', fontSize: '12pt', marginBottom: '2mm' }}>
-                  FACTURE
+                  {invoice.type === 'proforma' && 'FACTURE PROFORMA'}
+                  {invoice.type === 'credit_note' && 'FACTURE D\'AVOIR'}
+                  {(!invoice.type || invoice.type === 'standard') && 'FACTURE'}
                 </div>
                 <div style={{ fontSize: '8pt' }}>
                   <div><strong>N°:</strong> {invoice.number}</div>
                   <div><strong>Date:</strong> {new Date(invoice.date).toLocaleDateString('fr-FR')}</div>
+                  {settings.responsibleNumber && (
+                    <div><strong>Responsable:</strong> {settings.responsibleNumber}</div>
+                  )}
+                  <div style={{ marginTop: '2mm' }}>
+                    <strong>Statut:</strong>{' '}
+                    <span style={{ 
+                      color: invoice.status === 'confirmed' ? '#28a745' : invoice.status === 'cancelled' ? '#dc3545' : '#ff9800',
+                      fontWeight: 'bold'
+                    }}>
+                      {invoice.status === 'confirmed' && '✓ CONFIRMÉE'}
+                      {invoice.status === 'cancelled' && '✗ ANNULÉE'}
+                      {(!invoice.status || invoice.status === 'draft') && '◐ BROUILLON'}
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -313,6 +330,11 @@ export default function PreviewInvoicePage() {
                     background: '#fafafa'
                   }}>
                     {item.description}
+                    {item.reference && (
+                      <div style={{ fontSize: '7pt', fontWeight: 'normal', color: '#666', marginTop: '1mm' }}>
+                        Réf: {item.reference}
+                      </div>
+                    )}
                   </td>
                   <td style={{ 
                     border: '1px solid #000', 

@@ -101,18 +101,53 @@ export default function DashboardPage() {
               <thead className="table__head">
                 <tr>
                   <th className="table__th">N° Facture</th>
+                  <th className="table__th">Type</th>
                   <th className="table__th">Date</th>
                   <th className="table__th">Client</th>
+                  <th className="table__th">Statut</th>
                   <th className="table__th table__th--right">Montant</th>
                   <th className="table__th table__th--center">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {invoices.map(invoice => (
+                {invoices.map(invoice => {
+                  const getStatusBadge = (status) => {
+                    const badges = {
+                      'draft': { label: 'Brouillon', color: '#ff9800' },
+                      'confirmed': { label: 'Confirmée', color: '#4caf50' },
+                      'cancelled': { label: 'Annulée', color: '#f44336' }
+                    }
+                    const badge = badges[status] || badges['draft']
+                    return (
+                      <span style={{ 
+                        background: badge.color, 
+                        color: 'white', 
+                        padding: '3px 8px', 
+                        borderRadius: '3px',
+                        fontSize: '0.85em',
+                        fontWeight: 'bold'
+                      }}>
+                        {badge.label}
+                      </span>
+                    )
+                  }
+
+                  const getTypeLabel = (type) => {
+                    const types = {
+                      'standard': 'Facture',
+                      'proforma': 'Proforma',
+                      'credit_note': 'Avoir'
+                    }
+                    return types[type] || 'Facture'
+                  }
+
+                  return (
                   <tr key={invoice.id} className="table__row">
                     <td className="table__td u-text-bold">{invoice.number}</td>
+                    <td className="table__td">{getTypeLabel(invoice.type)}</td>
                     <td className="table__td">{new Date(invoice.date).toLocaleDateString('fr-FR')}</td>
                     <td className="table__td">{invoice.client.name}</td>
+                    <td className="table__td">{getStatusBadge(invoice.status)}</td>
                     <td className="table__td table__td--right u-text-bold u-text-accent">
                       {formatNumber(invoice.total)} Ar
                     </td>
@@ -142,7 +177,8 @@ export default function DashboardPage() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  )
+                })}
               </tbody>
             </table>
           </div>

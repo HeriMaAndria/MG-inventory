@@ -6,6 +6,7 @@ import CreateInvoicePage from './pages/CreateInvoicePage'
 import PreviewInvoicePage from './pages/PreviewInvoicePage'
 import ClientsPage from './pages/ClientsPage'
 import StockPage from './pages/StockPage'
+import SettingsPage from './pages/SettingsPage'
 import './styles/main.css'
 
 function App() {
@@ -34,6 +35,7 @@ function App() {
               <Route path="/preview/:id" element={<PreviewInvoicePage />} />
               <Route path="/clients" element={<ClientsPage />} />
               <Route path="/stock" element={<StockPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
             </Routes>
           </div>
         </main>
