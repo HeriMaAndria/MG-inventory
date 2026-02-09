@@ -309,7 +309,8 @@ export default function PreviewInvoicePage() {
                     border: '1px solid #000', 
                     padding: '2mm',
                     verticalAlign: 'top',
-                    fontWeight: 'bold'
+                    fontWeight: 'bold',
+                    background: '#fafafa'
                   }}>
                     {item.description}
                   </td>
@@ -317,7 +318,8 @@ export default function PreviewInvoicePage() {
                     border: '1px solid #000', 
                     padding: '2mm', 
                     textAlign: 'right',
-                    verticalAlign: 'top'
+                    verticalAlign: 'top',
+                    background: '#fafafa'
                   }}>
                     {item.quantity} {item.unit}
                   </td>
@@ -325,7 +327,8 @@ export default function PreviewInvoicePage() {
                     border: '1px solid #000', 
                     padding: '2mm', 
                     textAlign: 'right',
-                    verticalAlign: 'top'
+                    verticalAlign: 'top',
+                    background: '#fafafa'
                   }}>
                     {formatNumber(item.unitPrice)}
                   </td>
@@ -334,7 +337,8 @@ export default function PreviewInvoicePage() {
                     padding: '2mm', 
                     textAlign: 'right',
                     verticalAlign: 'top',
-                    fontWeight: 'bold'
+                    fontWeight: 'bold',
+                    background: '#fafafa'
                   }}>
                     {formatNumber(item.total)}
                   </td>
