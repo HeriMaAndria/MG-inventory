@@ -74,10 +74,12 @@ body {
   max-width: 1400px;
   display: flex;
   flex-direction: column;
-  flex: 0 0 auto;
   min-height: 100vh;
   margin: 0 auto;
   padding: 20px;
+}
+.container > * {
+  flex: 0 0 auto;
 }
 
 .btn {
