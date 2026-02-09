@@ -8,7 +8,6 @@ export default function CreateInvoicePage() {
   const [searchParams] = useSearchParams()
   const editId = searchParams.get('id')
 
-  const [settings] = useState(DB.getSettings())
   const [clients, setClients] = useState([])
   const [stock, setStock] = useState([])
   
@@ -25,11 +24,13 @@ export default function CreateInvoicePage() {
   })
 
   const [currentItem, setCurrentItem] = useState({
+    stockReferenceId: '',
+    purchasePrice: null,
     description: '',
-    unit: 'pièce',
+    detailLines: [{ text: '' }],
     quantity: '',
-    unitPrice: '',
-    selectedStockId: ''
+    unit: 'mètre',
+    unitPrice: ''
   })
 
   useEffect(() => {
@@ -78,30 +79,103 @@ export default function CreateInvoicePage() {
     if (item) {
       setCurrentItem({
         ...currentItem,
+        stockReferenceId: stockId,
+        purchasePrice: item.purchasePrice || null,
         description: item.name,
-        unit: item.unit,
-        unitPrice: item.unitPrice.toString(),
-        selectedStockId: stockId
+        unit: item.purchaseUnit || 'pièce',
+        unitPrice: item.unitPrice?.toString() || ''
+      })
+    } else {
+      // Réinitialiser si aucun article sélectionné
+      setCurrentItem({
+        ...currentItem,
+        stockReferenceId: '',
+        purchasePrice: null
       })
     }
   }
 
+  const addDetailLine = () => {
+    setCurrentItem({
+      ...currentItem,
+      detailLines: [...currentItem.detailLines, { text: '' }]
+    })
+  }
+
+  const removeDetailLine = (index) => {
+    const newLines = currentItem.detailLines.filter((_, i) => i !== index)
+    setCurrentItem({
+      ...currentItem,
+      detailLines: newLines.length > 0 ? newLines : [{ text: '' }]
+    })
+  }
+
+  const updateDetailLine = (index, value) => {
+    const newLines = [...currentItem.detailLines]
+    newLines[index] = { text: value }
+    setCurrentItem({
+      ...currentItem,
+      detailLines: newLines
+    })
+  }
+
+  const calculateMargin = () => {
+    if (!currentItem.purchasePrice || !currentItem.quantity || !currentItem.unitPrice) {
+      return null
+    }
+
+    const quantity = parseFloat(currentItem.quantity)
+    const unitPrice = parseFloat(currentItem.unitPrice)
+    const purchasePrice = parseFloat(currentItem.purchasePrice)
+
+    const purchaseCost = quantity * purchasePrice
+    const saleTotal = quantity * unitPrice
+    const margin = saleTotal - purchaseCost
+    const marginPercent = (margin / purchaseCost) * 100
+
+    return {
+      purchaseCost,
+      saleTotal,
+      margin,
+      marginPercent
+    }
+  }
+
   const addItem = () => {
-    if (!currentItem.description || !currentItem.quantity || !currentItem.unitPrice) {
-      alert('❌ Veuillez remplir tous les champs de l\'article')
+    if (!currentItem.description.trim()) {
+      alert('❌ Veuillez saisir une désignation')
+      return
+    }
+
+    if (!currentItem.quantity || !currentItem.unitPrice) {
+      alert('❌ Veuillez saisir la quantité et le prix unitaire')
       return
     }
 
     const quantity = parseFloat(currentItem.quantity)
     const unitPrice = parseFloat(currentItem.unitPrice)
 
+    // Filtrer les lignes de détails non vides
+    const validDetailLines = currentItem.detailLines.filter(line => line.text.trim())
+
     const newItem = {
       id: Date.now(),
+      stockReferenceId: currentItem.stockReferenceId || null,
+      purchasePrice: currentItem.purchasePrice,
       description: currentItem.description,
-      unit: currentItem.unit,
+      detailLines: validDetailLines,
       quantity,
+      unit: currentItem.unit,
       unitPrice,
       total: quantity * unitPrice
+    }
+
+    // Calculer la marge si applicable
+    if (currentItem.purchasePrice) {
+      const marginData = calculateMargin()
+      newItem.purchaseCost = marginData.purchaseCost
+      newItem.margin = marginData.margin
+      newItem.marginPercent = marginData.marginPercent
     }
 
     setFormData({
@@ -109,12 +183,15 @@ export default function CreateInvoicePage() {
       items: [...formData.items, newItem]
     })
 
+    // Réinitialiser le formulaire
     setCurrentItem({
+      stockReferenceId: '',
+      purchasePrice: null,
       description: '',
-      unit: 'pièce',
+      detailLines: [{ text: '' }],
       quantity: '',
-      unitPrice: '',
-      selectedStockId: ''
+      unit: 'mètre',
+      unitPrice: ''
     })
   }
 
@@ -161,6 +238,7 @@ export default function CreateInvoicePage() {
   }
 
   const total = calculateTotal()
+  const marginInfo = calculateMargin()
 
   return (
     <div className="container">
@@ -265,55 +343,81 @@ export default function CreateInvoicePage() {
         </div>
 
         <div className="card">
-          <h2>📦 Articles</h2>
+          <h2>📦 Ajouter un Article</h2>
           
           {stock.length > 0 && (
-            <div style={{ marginBottom: '15px' }}>
+            <div style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', marginBottom: '5px', fontWeight: '600' }}>
-                Sélectionner depuis le stock
+                💡 Référence stock (optionnel - pour calculer la marge)
               </label>
               <select
-                value={currentItem.selectedStockId}
+                value={currentItem.stockReferenceId}
                 onChange={(e) => selectStockItem(e.target.value)}
               >
-                <option value="">-- Choisir un article --</option>
+                <option value="">-- Article libre (sans référence) --</option>
                 {stock.map(item => (
                   <option key={item.id} value={item.id}>
-                    {item.name} ({formatNumber(item.unitPrice)} Ar/{item.unit})
+                    {item.name} - {formatNumber(item.purchasePrice || 0)} Ar/{item.purchaseUnit}
                   </option>
                 ))}
               </select>
             </div>
           )}
 
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr auto', gap: '10px', alignItems: 'end', marginBottom: '15px' }}>
-            <div>
-              <label style={{ display: 'block', marginBottom: '5px', fontWeight: '600' }}>Description</label>
-              <input
-                type="text"
-                value={currentItem.description}
-                onChange={(e) => setCurrentItem({ ...currentItem, description: e.target.value })}
-                placeholder="Description de l'article"
-              />
-            </div>
-            <div>
-              <label style={{ display: 'block', marginBottom: '5px', fontWeight: '600' }}>Unité</label>
-              <select
-                value={currentItem.unit}
-                onChange={(e) => setCurrentItem({ ...currentItem, unit: e.target.value })}
+          <div style={{ marginBottom: '15px' }}>
+            <label style={{ display: 'block', marginBottom: '5px', fontWeight: '600' }}>
+              📋 Désignation (libellé facture) <span style={{ color: 'red' }}>*</span>
+            </label>
+            <input
+              type="text"
+              value={currentItem.description}
+              onChange={(e) => setCurrentItem({ ...currentItem, description: e.target.value })}
+              placeholder="Ex: TÔLE BAC 0.30 ROUGE (Pré-laqué)"
+            />
+          </div>
+
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '10px', fontWeight: '600' }}>
+              📏 Détails / Lignes (optionnel)
+            </label>
+            <div style={{ background: '#1a1a1a', padding: '15px', borderRadius: '5px', border: '1px solid #333' }}>
+              {currentItem.detailLines.map((line, index) => (
+                <div key={index} style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
+                  <input
+                    type="text"
+                    value={line.text}
+                    onChange={(e) => updateDetailLine(index, e.target.value)}
+                    placeholder={`Ligne ${index + 1}: Ex: 12 feuilles × 2.5m = 30m`}
+                    style={{ flex: 1 }}
+                  />
+                  {currentItem.detailLines.length > 1 && (
+                    <button
+                      type="button"
+                      className="btn btn-danger"
+                      onClick={() => removeDetailLine(index)}
+                      style={{ padding: '8px 15px' }}
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              ))}
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={addDetailLine}
+                style={{ padding: '8px 15px', fontSize: '0.9em' }}
               >
-                <option value="pièce">Pièce</option>
-                <option value="kg">kg</option>
-                <option value="m">m</option>
-                <option value="m²">m²</option>
-                <option value="m³">m³</option>
-                <option value="litre">litre</option>
-                <option value="sac">sac</option>
-                <option value="paquet">paquet</option>
-              </select>
+                + Ajouter une ligne
+              </button>
             </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '15px', marginBottom: '15px' }}>
             <div>
-              <label style={{ display: 'block', marginBottom: '5px', fontWeight: '600' }}>Quantité</label>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: '600' }}>
+                Quantité totale <span style={{ color: 'red' }}>*</span>
+              </label>
               <input
                 type="number"
                 value={currentItem.quantity}
@@ -324,7 +428,27 @@ export default function CreateInvoicePage() {
               />
             </div>
             <div>
-              <label style={{ display: 'block', marginBottom: '5px', fontWeight: '600' }}>P.U (Ar)</label>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: '600' }}>Unité</label>
+              <select
+                value={currentItem.unit}
+                onChange={(e) => setCurrentItem({ ...currentItem, unit: e.target.value })}
+              >
+                <option value="mètre">mètre (m)</option>
+                <option value="pièce">pièce</option>
+                <option value="kg">kilogramme (kg)</option>
+                <option value="m²">mètre carré (m²)</option>
+                <option value="m³">mètre cube (m³)</option>
+                <option value="litre">litre</option>
+                <option value="sac">sac</option>
+                <option value="paquet">paquet</option>
+                <option value="sachet">sachet</option>
+                <option value="forfait">forfait</option>
+              </select>
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: '600' }}>
+                Prix unitaire (Ar) <span style={{ color: 'red' }}>*</span>
+              </label>
               <input
                 type="number"
                 value={currentItem.unitPrice}
@@ -334,60 +458,99 @@ export default function CreateInvoicePage() {
                 min="0"
               />
             </div>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={addItem}
-              style={{ padding: '10px 20px' }}
-            >
-              ➕
-            </button>
           </div>
 
-          {formData.items.length > 0 && (
-            <div style={{ marginTop: '20px' }}>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Description</th>
-                    <th>Unité</th>
-                    <th>Quantité</th>
-                    <th>P.U</th>
-                    <th>Total</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {formData.items.map(item => (
-                    <tr key={item.id}>
-                      <td>{item.description}</td>
-                      <td>{item.unit}</td>
-                      <td>{item.quantity}</td>
-                      <td>{formatNumber(item.unitPrice)} Ar</td>
-                      <td><strong>{formatNumber(item.total)} Ar</strong></td>
-                      <td>
-                        <button
-                          type="button"
-                          className="btn btn-danger"
-                          onClick={() => removeItem(item.id)}
-                          style={{ padding: '6px 12px' }}
-                        >
-                          🗑️
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                  <tr style={{ background: '#3a3a3a', fontWeight: 'bold' }}>
-                    <td colSpan="4" style={{ textAlign: 'right' }}>TOTAL</td>
-                    <td colSpan="2" style={{ color: 'var(--accent)', fontSize: '1.2em' }}>
-                      {formatNumber(total)} Ar
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+          {marginInfo && (
+            <div style={{ 
+              background: marginInfo.marginPercent >= 20 ? '#d4edda' : marginInfo.marginPercent >= 10 ? '#fff3cd' : '#f8d7da',
+              border: `1px solid ${marginInfo.marginPercent >= 20 ? '#28a745' : marginInfo.marginPercent >= 10 ? '#ffc107' : '#dc3545'}`,
+              color: marginInfo.marginPercent >= 20 ? '#155724' : marginInfo.marginPercent >= 10 ? '#856404' : '#721c24',
+              padding: '12px 15px',
+              borderRadius: '5px',
+              marginBottom: '15px',
+              fontSize: '0.95em'
+            }}>
+              <strong>📊 Calcul de marge :</strong>
+              <div style={{ marginTop: '5px' }}>
+                Coût d'achat: {formatNumber(marginInfo.purchaseCost)} Ar | 
+                Prix de vente: {formatNumber(marginInfo.saleTotal)} Ar | 
+                Marge: {formatNumber(marginInfo.margin)} Ar ({marginInfo.marginPercent.toFixed(1)}%)
+                {marginInfo.marginPercent < 10 && ' ⚠️ Marge faible'}
+                {marginInfo.marginPercent >= 20 && ' ✅ Bonne marge'}
+              </div>
             </div>
           )}
+
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={addItem}
+            style={{ width: '100%', padding: '12px' }}
+          >
+            ✅ Ajouter à la facture
+          </button>
         </div>
+
+        {formData.items.length > 0 && (
+          <div className="card">
+            <h2>📋 Articles ajoutés ({formData.items.length})</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Désignation</th>
+                  <th style={{ width: '100px' }}>Quantité</th>
+                  <th style={{ width: '120px' }}>P.U</th>
+                  <th style={{ width: '140px' }}>Total</th>
+                  <th style={{ width: '80px' }}></th>
+                </tr>
+              </thead>
+              <tbody>
+                {formData.items.map(item => (
+                  <tr key={item.id}>
+                    <td>
+                      <div style={{ fontWeight: 'bold' }}>{item.description}</div>
+                      {item.detailLines.length > 0 && (
+                        <div style={{ fontSize: '0.9em', color: '#999', marginTop: '5px' }}>
+                          {item.detailLines.map((line, idx) => (
+                            <div key={idx}>• {line.text}</div>
+                          ))}
+                        </div>
+                      )}
+                      {item.marginPercent !== undefined && (
+                        <div style={{ 
+                          fontSize: '0.85em', 
+                          marginTop: '5px',
+                          color: item.marginPercent >= 20 ? '#4caf50' : item.marginPercent >= 10 ? '#ff9800' : '#f44336'
+                        }}>
+                          Marge: {item.marginPercent.toFixed(1)}%
+                        </div>
+                      )}
+                    </td>
+                    <td>{item.quantity} {item.unit}</td>
+                    <td>{formatNumber(item.unitPrice)} Ar</td>
+                    <td><strong>{formatNumber(item.total)} Ar</strong></td>
+                    <td>
+                      <button
+                        type="button"
+                        className="btn btn-danger"
+                        onClick={() => removeItem(item.id)}
+                        style={{ padding: '6px 12px' }}
+                      >
+                        🗑️
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                <tr style={{ background: '#3a3a3a', fontWeight: 'bold' }}>
+                  <td colSpan="3" style={{ textAlign: 'right' }}>TOTAL</td>
+                  <td colSpan="2" style={{ color: 'var(--accent)', fontSize: '1.2em' }}>
+                    {formatNumber(total)} Ar
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        )}
 
         <div className="card">
           <h2>📝 Notes</h2>

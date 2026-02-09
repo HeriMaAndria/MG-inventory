@@ -171,6 +171,15 @@ export const DB = {
     item.id = this.generateId()
     item.createdAt = new Date().toISOString()
     item.lastUpdated = new Date().toISOString()
+    
+    // Assurer la compatibilité avec le nouveau système
+    if (!item.purchaseUnit) {
+      item.purchaseUnit = item.unit || 'pièce'
+    }
+    if (!item.purchasePrice && item.unitPrice) {
+      item.purchasePrice = item.unitPrice
+    }
+    
     stock.push(item)
     this.saveStock(stock)
     return item
