@@ -77,7 +77,18 @@ export default function PreviewInvoicePage() {
   }
 
   return (
-    <div>
+   <div>
+    {/* === AJOUTE CES LIGNES === */}
+    <style>{`
+      ${isFullscreen ? `
+        nav.navbar {
+          display: none !important;
+        }
+        body {
+          overflow: hidden;
+        }
+      ` : ''}
+    `}</style>
       {/* Barre d'actions */}
       <div className="no-print" style={{ 
         background: isFullscreen ? 'rgba(26,26,26,0.95)' : 'var(--bg-secondary)', 
@@ -211,49 +222,64 @@ export default function PreviewInvoicePage() {
           }}>
             <thead>
               <tr style={{ background: '#f5f5f5' }}>
-                <th style={{ 
-                  border: '1px solid #000', 
-                  padding: '2mm', 
-                  textAlign: 'left',
-                  fontWeight: 'bold',
-                  width: '30%'
-                }}>
+               <th style={{ 
+  border: '1px solid #000', 
+  padding: '2mm', 
+  textAlign: 'left',
+  fontWeight: 'bold',
+  fontSize: '9pt',           // ← Plus gros
+  color: '#000',             // ← Noir intense
+  textTransform: 'uppercase', // ← MAJUSCULES
+  width: '30%'
+}}>
                   DÉTAILS
                 </th>
-                <th style={{ 
-                  border: '1px solid #000', 
-                  padding: '2mm', 
-                  textAlign: 'left',
-                  fontWeight: 'bold',
-                  width: '25%'
-                }}>
+               <th style={{ 
+  border: '1px solid #000', 
+  padding: '2mm', 
+  textAlign: 'left',
+  fontWeight: 'bold',
+  fontSize: '9pt',           // ← Plus gros
+  color: '#000',             // ← Noir intense
+  textTransform: 'uppercase', // ← MAJUSCULES
+  width: '30%'
+}}>
                   DÉSIGNATION
                 </th>
-                <th style={{ 
-                  border: '1px solid #000', 
-                  padding: '2mm', 
-                  textAlign: 'right',
-                  fontWeight: 'bold',
-                  width: '15%'
-                }}>
+               <th style={{ 
+  border: '1px solid #000', 
+  padding: '2mm', 
+  textAlign: 'left',
+  fontWeight: 'bold',
+  fontSize: '9pt',           // ← Plus gros
+  color: '#000',             // ← Noir intense
+  textTransform: 'uppercase', // ← MAJUSCULES
+  width: '30%'
+}}>
                   QTÉ
                 </th>
-                <th style={{ 
-                  border: '1px solid #000', 
-                  padding: '2mm', 
-                  textAlign: 'right',
-                  fontWeight: 'bold',
-                  width: '15%'
-                }}>
+               <th style={{ 
+  border: '1px solid #000', 
+  padding: '2mm', 
+  textAlign: 'left',
+  fontWeight: 'bold',
+  fontSize: '9pt',           // ← Plus gros
+  color: '#000',             // ← Noir intense
+  textTransform: 'uppercase', // ← MAJUSCULES
+  width: '30%'
+}}>
                   P.U (Ar)
                 </th>
-                <th style={{ 
-                  border: '1px solid #000', 
-                  padding: '2mm', 
-                  textAlign: 'right',
-                  fontWeight: 'bold',
-                  width: '15%'
-                }}>
+               <th style={{ 
+  border: '1px solid #000', 
+  padding: '2mm', 
+  textAlign: 'left',
+  fontWeight: 'bold',
+  fontSize: '9pt',           // ← Plus gros
+  color: '#000',             // ← Noir intense
+  textTransform: 'uppercase', // ← MAJUSCULES
+  width: '30%'
+}}>
                   MT (Ar)
                 </th>
               </tr>
@@ -266,7 +292,8 @@ export default function PreviewInvoicePage() {
                     padding: '2mm',
                     verticalAlign: 'top',
                     fontSize: '7pt',
-                    lineHeight: '1.5'
+                    lineHeight: '1.5',
+                    background: '#fafafa'
                   }}>
                     {item.detailLines && item.detailLines.length > 0 ? (
                       <div>
@@ -282,7 +309,8 @@ export default function PreviewInvoicePage() {
                     border: '1px solid #000', 
                     padding: '2mm',
                     verticalAlign: 'top',
-                    fontWeight: 'bold'
+                    fontWeight: 'bold',
+                    background: '#fafafa'
                   }}>
                     {item.description}
                   </td>
@@ -290,7 +318,8 @@ export default function PreviewInvoicePage() {
                     border: '1px solid #000', 
                     padding: '2mm', 
                     textAlign: 'right',
-                    verticalAlign: 'top'
+                    verticalAlign: 'top',
+                    background: '#fafafa'
                   }}>
                     {item.quantity} {item.unit}
                   </td>
@@ -298,7 +327,8 @@ export default function PreviewInvoicePage() {
                     border: '1px solid #000', 
                     padding: '2mm', 
                     textAlign: 'right',
-                    verticalAlign: 'top'
+                    verticalAlign: 'top',
+                    background: '#fafafa'
                   }}>
                     {formatNumber(item.unitPrice)}
                   </td>
@@ -307,7 +337,8 @@ export default function PreviewInvoicePage() {
                     padding: '2mm', 
                     textAlign: 'right',
                     verticalAlign: 'top',
-                    fontWeight: 'bold'
+                    fontWeight: 'bold',
+                    background: '#fafafa'
                   }}>
                     {formatNumber(item.total)}
                   </td>
