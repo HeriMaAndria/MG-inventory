@@ -230,7 +230,7 @@ export default function PreviewInvoicePage() {
   fontSize: '9pt',           // ← Plus gros
   color: '#000',             // ← Noir intense
   textTransform: 'uppercase', // ← MAJUSCULES
-  width: '30%'
+  width: '25%'
 }}>
                   DÉTAILS
                 </th>
@@ -254,7 +254,7 @@ export default function PreviewInvoicePage() {
   fontSize: '9pt',           // ← Plus gros
   color: '#000',             // ← Noir intense
   textTransform: 'uppercase', // ← MAJUSCULES
-  width: '30%'
+  width: '15%'
 }}>
                   QTÉ
                 </th>
@@ -266,7 +266,7 @@ export default function PreviewInvoicePage() {
   fontSize: '9pt',           // ← Plus gros
   color: '#000',             // ← Noir intense
   textTransform: 'uppercase', // ← MAJUSCULES
-  width: '30%'
+  width: '14%'
 }}>
                   P.U (Ar)
                 </th>
@@ -278,7 +278,7 @@ export default function PreviewInvoicePage() {
   fontSize: '9pt',           // ← Plus gros
   color: '#000',             // ← Noir intense
   textTransform: 'uppercase', // ← MAJUSCULES
-  width: '30%'
+  width: '16%'
 }}>
                   MT (Ar)
                 </th>
