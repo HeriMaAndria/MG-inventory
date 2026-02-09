@@ -72,6 +72,8 @@ body {
 .container {
   width: 100%;
   max-width: 1400px;
+  display: flex;
+  min-height: 100vh;
   margin: 0 auto;
   padding: 20px;
 }
