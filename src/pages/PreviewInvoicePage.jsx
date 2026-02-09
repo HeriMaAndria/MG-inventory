@@ -277,7 +277,7 @@ export default function PreviewInvoicePage() {
   fontWeight: 'bold',
   fontSize: '9pt',           // ← Plus gros
   color: '#000',             // ← Noir intense
-  textTransform: 'uppercase', // ← MAJUSCULES
+  textTransform: 'uppercase', // ← MAJUSCULE
   width: '16%'
 }}>
                   MT (Ar)
