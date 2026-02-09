@@ -10,18 +10,20 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  width: 100vw;
 }
 
 body {
- width: 100vw;
+  width: 100%;
+  min-height: 100vh;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
   background: var(--bg-primary);
   color: var(--text);
   line-height: 1.6;
+  overflow-x: hidden;
 }
 
 .navbar {
+  width: 100%;
   background: var(--bg-secondary);
   border-bottom: 2px solid var(--accent);
   position: sticky;
@@ -30,7 +32,8 @@ body {
 }
 
 .nav-container {
-  max-width: 100%;
+  width: 100%;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 15px 20px;
   display: flex;
@@ -67,7 +70,8 @@ body {
 }
 
 .container {
-  max-width: 100%;
+  width: 100%;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 20px;
 }
@@ -148,10 +152,45 @@ td {
 tr:hover {
   background: #333;
 }
-/* Pour responsive mobile */
+
+/* Responsive mobile */
 @media (max-width: 768px) {
+  .nav-container {
+    padding: 10px 15px;
+  }
+  
+  .nav-brand {
+    font-size: 1.3em;
+  }
+  
   .container {
-    width: 100vw;
-    padding: 10px;  /* Réduit padding mobile */
+    padding: 15px;
+  }
+  
+  .card {
+    padding: 15px;
+  }
+  
+  table {
+    font-size: 0.9em;
+  }
+  
+  th, td {
+    padding: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .nav-container {
+    padding: 10px;
+  }
+  
+  .container {
+    padding: 10px;
+  }
+  
+  .btn {
+    padding: 10px 20px;
+    font-size: 0.9em;
   }
 }
