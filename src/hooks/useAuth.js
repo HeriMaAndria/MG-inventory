@@ -5,112 +5,66 @@ export function useAuth() {
   const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
 
-  // Charge les données au montage
   useEffect(() => {
-    // Récupérer la session actuelle
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        loadProfile(session.user.id)
-      } else {
-        setLoading(false)
-      }
-    })
-
-    // Écouter les changements d'authentification
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setUser(session?.user ?? null)
-        if (session?.user) {
-          loadProfile(session.user.id)
-        } else {
-          setProfile(null)
-          setLoading(false)
-        }
-      }
-    )
-
-    return () => subscription.unsubscribe()
-  }, [])
-
-  async function loadProfile(userId) {
-    try {
-      const { data, error: err } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single()
-
-      if (err) {
-        console.error('Erreur lors du chargement du profil:', err)
-        setError(err.message)
-      } else {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      setUser(user)
+      
+      if (user) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single()
         setProfile(data)
-        setError(null)
       }
-    } catch (err) {
-      console.error('Erreur:', err)
-      setError(err.message)
-    } finally {
       setLoading(false)
     }
+
+    getUser()
+  }, [])
+
+  const login = async (email, password) => {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) return { success: false, error: error.message }
+      setUser(data.user)
+      return { success: true }
+    } catch (err) {
+      return { success: false, error: err.message }
+    }
   }
 
-  const signUp = async (email, password) => {
+  const signup = async (userData) => {
     try {
-      setError(null)
-      const { data, error: err } = await supabase.auth.signUp({
-        email,
-        password
+      const { data, error } = await supabase.auth.signUp({
+        email: userData.email,
+        password: userData.password,
       })
-      if (err) throw err
-      return data
+      if (error) return { success: false, error: error.message }
+      
+      const { error: profileError } = await supabase.from('profiles').insert([{
+        id: data.user.id,
+        email: userData.email,
+        role: userData.role,
+        companyName: userData.companyName,
+        responsibleNumber: userData.responsibleNumber,
+      }])
+      
+      if (profileError) return { success: false, error: profileError.message }
+      setUser(data.user)
+      return { success: true }
     } catch (err) {
-      setError(err.message)
-      throw err
+      return { success: false, error: err.message }
     }
   }
 
-  const signIn = async (email, password) => {
-    try {
-      setError(null)
-      const { data, error: err } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      })
-      if (err) throw err
-      return data
-    } catch (err) {
-      setError(err.message)
-      throw err
-    }
+  const logout = async () => {
+    await supabase.auth.signOut()
+    setUser(null)
+    setProfile(null)
   }
 
-  const signOut = async () => {
-    try {
-      setError(null)
-      const { error: err } = await supabase.auth.signOut()
-      if (err) throw err
-    } catch (err) {
-      setError(err.message)
-      throw err
-    }
-  }
-
-  const isAdmin = profile?.role === 'admin'
-  const isRevendeur = profile?.role === 'revendeur'
-
-  return {
-    user,
-    profile,
-    loading,
-    error,
-    isAdmin,
-    isRevendeur,
-    signUp,
-    signIn,
-    signOut
-  }
+  return { user, profile, loading, login, signup, logout }
 }
