@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { InvoiceService } from '../services/invoiceService'
+import { supabase } from '../services/supabase'
 
 export function useInvoices(filter = 'all') {
   const [invoices, setInvoices] = useState([])
