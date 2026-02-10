@@ -9,7 +9,7 @@ import SignupPage from './pages/auth/SignupPage.jsx'
 import DashboardPage from './pages/user/DashboardPage.jsx'
 
 // Composants
-import { ProtectedRoute, AdminRoute } from './components/ProtectedRoute.jsx'
+import ProtectedRoute from './components/ProtectedRoute.jsx'
 
 import './styles/main.css'
 
