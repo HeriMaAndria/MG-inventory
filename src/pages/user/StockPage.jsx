@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useAuth } from '../../hooks/useAuth.js'
+import { useAuth } from '../../hooks/useAuth'
 
 export default function StockPage() {
   const { user } = useAuth()

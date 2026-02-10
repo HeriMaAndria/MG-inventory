@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useAuth } from '../../hooks/useAuth.js'
+import { useAuth } from '../../hooks/useAuth'
 
 export default function PreviewInvoicePage() {
   const { id } = useParams()

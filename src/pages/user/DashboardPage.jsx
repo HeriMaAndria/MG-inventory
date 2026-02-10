@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { useAuth } from '../../hooks/useAuth.js'
+import { useAuth } from '../../hooks/useAuth'
 
 export default function DashboardPage() {
   const { user, profile } = useAuth()
