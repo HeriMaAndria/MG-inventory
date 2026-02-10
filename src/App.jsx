@@ -2,8 +2,8 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './hooks/useAuth'
 
 // Pages publiques
-import LoginPage from './pages/LoginPage'
-import SignupPage from './pages/SignupPage'
+import LoginPage from './pages/auth/LoginPage'
+import SignupPage from './pages/auth/SignupPage'
 
 // Pages utilisateur
 import DashboardPage from './pages/user/DashboardPage'
