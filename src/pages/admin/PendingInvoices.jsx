@@ -1,48 +1,92 @@
 import { useState, useEffect } from 'react'
+import { supabase } from '../../services/supabase'
 
 export default function PendingInvoices() {
   const [invoices, setInvoices] = useState([])
   const [selectedId, setSelectedId] = useState(null)
   const [comment, setComment] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    setInvoices([
-      {
-        id: 1,
-        draftNumber: 'BRO-REF001-2025-001',
-        client: 'Client A',
-        revendeur: 'Boutique A',
-        date: '2025-02-10',
-        total: 42500,
-        items: [
-          { designation: 'Produit A', quantity: 5, unitPrice: 7000, amount: 35000 },
-          { designation: 'Produit B', quantity: 3, unitPrice: 2500, amount: 7500 },
-        ],
-      },
-      {
-        id: 2,
-        draftNumber: 'BRO-REF002-2025-002',
-        client: 'Client B',
-        revendeur: 'Boutique B',
-        date: '2025-02-09',
-        total: 15000,
-        items: [
-          { designation: 'Service', quantity: 1, unitPrice: 15000, amount: 15000 },
-        ],
-      },
-    ])
+    loadPendingInvoices()
   }, [])
 
-  const handleApprove = (id) => {
-    alert('Facture validée!')
-    setInvoices(invoices.filter(inv => inv.id !== id))
-    setSelectedId(null)
+  const loadPendingInvoices = async () => {
+    try {
+      setLoading(true)
+      setError('')
+
+      const { data, error: err } = await supabase
+        .from('invoices')
+        .select(`
+          *,
+          profiles:userId (
+            companyName
+          )
+        `)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+
+      if (err) throw err
+      setInvoices(data || [])
+    } catch (err) {
+      setError('Erreur lors du chargement des factures')
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const handleReject = (id) => {
-    alert('Facture rejetée!')
-    setInvoices(invoices.filter(inv => inv.id !== id))
-    setSelectedId(null)
+  const handleApprove = async (id) => {
+    try {
+      const { error: err } = await supabase
+        .from('invoices')
+        .update({ 
+          status: 'approved',
+          adminComment: comment,
+          approvedAt: new Date().toISOString()
+        })
+        .eq('id', id)
+
+      if (err) throw err
+
+      alert('Facture validée!')
+      setComment('')
+      loadPendingInvoices()
+      setSelectedId(null)
+    } catch (err) {
+      alert('Erreur lors de la validation')
+      console.error(err)
+    }
+  }
+
+  const handleReject = async (id) => {
+    if (!comment.trim()) {
+      alert('Veuillez ajouter un commentaire pour justifier le rejet')
+      return
+    }
+
+    try {
+      const { error: err } = await supabase
+        .from('invoices')
+        .update({ 
+          status: 'rejected',
+          adminComment: comment,
+          rejectedAt: new Date().toISOString()
+        })
+        .eq('id', id)
+
+      if (err) throw err
+
+      alert('Facture rejetée!')
+      setComment('')
+      loadPendingInvoices()
+      setSelectedId(null)
+    } catch (err) {
+      alert('Erreur lors du rejet')
+      console.error(err)
+    }
   }
 
   const selected = invoices.find(inv => inv.id === selectedId)
@@ -59,6 +103,15 @@ export default function PendingInvoices() {
           font-weight: 700;
           color: var(--text-primary);
           margin-bottom: 2rem;
+        }
+
+        .alert-error {
+          background-color: rgba(239, 68, 68, 0.1);
+          border: 1px solid var(--error);
+          border-radius: 6px;
+          padding: 1rem;
+          color: var(--error);
+          margin-bottom: 1rem;
         }
 
         .invoices-list {
@@ -299,7 +352,13 @@ export default function PendingInvoices() {
 
       <h1 className="page-title">Factures en Attente de Validation</h1>
 
-      {invoices.length === 0 ? (
+      {error && <div className="alert-error">{error}</div>}
+
+      {loading ? (
+        <div className="empty-state">
+          <p>Chargement...</p>
+        </div>
+      ) : invoices.length === 0 ? (
         <div className="empty-state">
           <p>Aucune facture en attente de validation</p>
         </div>
@@ -312,11 +371,11 @@ export default function PendingInvoices() {
                 className={`invoice-card ${selectedId === invoice.id ? 'selected' : ''}`}
                 onClick={() => setSelectedId(invoice.id)}
               >
-                <div className="invoice-number">{invoice.draftNumber}</div>
-                <div className="invoice-info">Client: {invoice.client}</div>
-                <div className="invoice-info">Revendeur: {invoice.revendeur}</div>
-                <div className="invoice-info">Date: {invoice.date}</div>
-                <div className="invoice-total">{invoice.total.toLocaleString('fr-FR')} Ar</div>
+                <div className="invoice-number">{invoice.invoiceNumber || invoice.draftNumber}</div>
+                <div className="invoice-info">Client: {invoice.clientName}</div>
+                <div className="invoice-info">Revendeur: {invoice.profiles?.companyName || 'N/A'}</div>
+                <div className="invoice-info">Date: {new Date(invoice.date).toLocaleDateString('fr-FR')}</div>
+                <div className="invoice-total">{invoice.total?.toLocaleString('fr-FR')} Ar</div>
               </div>
             ))}
           </div>
@@ -329,23 +388,23 @@ export default function PendingInvoices() {
                 <div className="details-table">
                   <div className="details-row">
                     <span className="details-label">Numéro:</span>
-                    <span className="details-value">{selected.draftNumber}</span>
+                    <span className="details-value">{selected.invoiceNumber || selected.draftNumber}</span>
                   </div>
                   <div className="details-row">
                     <span className="details-label">Client:</span>
-                    <span className="details-value">{selected.client}</span>
+                    <span className="details-value">{selected.clientName}</span>
                   </div>
                   <div className="details-row">
                     <span className="details-label">Revendeur:</span>
-                    <span className="details-value">{selected.revendeur}</span>
+                    <span className="details-value">{selected.profiles?.companyName || 'N/A'}</span>
                   </div>
                   <div className="details-row">
                     <span className="details-label">Date:</span>
-                    <span className="details-value">{selected.date}</span>
+                    <span className="details-value">{new Date(selected.date).toLocaleDateString('fr-FR')}</span>
                   </div>
                   <div className="details-row">
                     <span className="details-label">Total:</span>
-                    <span className="details-value">{selected.total.toLocaleString('fr-FR')} Ar</span>
+                    <span className="details-value">{selected.total?.toLocaleString('fr-FR')} Ar</span>
                   </div>
                 </div>
 
@@ -361,12 +420,12 @@ export default function PendingInvoices() {
                       </tr>
                     </thead>
                     <tbody>
-                      {selected.items.map((item, idx) => (
+                      {(selected.items || []).map((item, idx) => (
                         <tr key={idx}>
                           <td>{item.designation}</td>
                           <td>{item.quantity}</td>
-                          <td>{item.unitPrice.toLocaleString('fr-FR')} Ar</td>
-                          <td>{item.amount.toLocaleString('fr-FR')} Ar</td>
+                          <td>{item.unitPrice?.toLocaleString('fr-FR')} Ar</td>
+                          <td>{item.amount?.toLocaleString('fr-FR')} Ar</td>
                         </tr>
                       ))}
                     </tbody>

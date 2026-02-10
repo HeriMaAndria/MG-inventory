@@ -1,21 +1,120 @@
 import { useState, useEffect } from 'react'
+import { supabase } from '../../services/supabase'
 
 export default function AdminReports() {
   const [period, setPeriod] = useState('month')
   const [stats, setStats] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    setStats({
-      totalInvoices: 156,
-      totalRevenue: 2500000,
-      averageInvoice: 16025,
-      topClient: 'Client A',
-      topRevendeur: 'Boutique A',
-      pendingAmount: 450000,
-      paidAmount: 2050000,
-      deliveredAmount: 1500000,
-    })
+    loadStats()
   }, [period])
+
+  const getDateRange = () => {
+    const now = new Date()
+    let startDate = new Date()
+
+    switch (period) {
+      case 'week':
+        startDate.setDate(now.getDate() - 7)
+        break
+      case 'month':
+        startDate.setMonth(now.getMonth() - 1)
+        break
+      case 'quarter':
+        startDate.setMonth(now.getMonth() - 3)
+        break
+      case 'year':
+        startDate.setFullYear(now.getFullYear() - 1)
+        break
+      default:
+        startDate.setMonth(now.getMonth() - 1)
+    }
+
+    return startDate.toISOString()
+  }
+
+  const loadStats = async () => {
+    try {
+      setLoading(true)
+      setError('')
+
+      const startDate = getDateRange()
+
+      // Récupérer toutes les factures de la période
+      const { data: invoices, error: invoicesErr } = await supabase
+        .from('invoices')
+        .select(`
+          *,
+          profiles:userId (
+            companyName
+          )
+        `)
+        .gte('created_at', startDate)
+
+      if (invoicesErr) throw invoicesErr
+
+      // Calculer les statistiques
+      const totalInvoices = invoices?.length || 0
+      const totalRevenue = invoices?.reduce((sum, inv) => sum + (inv.total || 0), 0) || 0
+      const averageInvoice = totalInvoices > 0 ? totalRevenue / totalInvoices : 0
+
+      // Grouper par statut
+      const pendingInvoices = invoices?.filter(inv => inv.status === 'pending') || []
+      const paidInvoices = invoices?.filter(inv => inv.status === 'paid') || []
+      const deliveredInvoices = invoices?.filter(inv => inv.status === 'delivered') || []
+
+      const pendingAmount = pendingInvoices.reduce((sum, inv) => sum + (inv.total || 0), 0)
+      const paidAmount = paidInvoices.reduce((sum, inv) => sum + (inv.total || 0), 0)
+      const deliveredAmount = deliveredInvoices.reduce((sum, inv) => sum + (inv.total || 0), 0)
+
+      // Trouver le meilleur client (par montant total)
+      const clientStats = {}
+      invoices?.forEach(inv => {
+        const client = inv.clientName
+        if (!clientStats[client]) {
+          clientStats[client] = 0
+        }
+        clientStats[client] += inv.total || 0
+      })
+
+      const topClient = Object.keys(clientStats).length > 0
+        ? Object.entries(clientStats).sort((a, b) => b[1] - a[1])[0][0]
+        : 'N/A'
+
+      // Trouver le meilleur revendeur (par nombre de factures)
+      const revendeurStats = {}
+      invoices?.forEach(inv => {
+        const revendeur = inv.profiles?.companyName || 'Inconnu'
+        if (!revendeurStats[revendeur]) {
+          revendeurStats[revendeur] = { count: 0, total: 0 }
+        }
+        revendeurStats[revendeur].count += 1
+        revendeurStats[revendeur].total += inv.total || 0
+      })
+
+      const topRevendeur = Object.keys(revendeurStats).length > 0
+        ? Object.entries(revendeurStats).sort((a, b) => b[1].total - a[1].total)[0][0]
+        : 'N/A'
+
+      setStats({
+        totalInvoices,
+        totalRevenue,
+        averageInvoice,
+        topClient,
+        topRevendeur,
+        pendingAmount,
+        paidAmount,
+        deliveredAmount,
+      })
+    } catch (err) {
+      setError('Erreur lors du chargement des statistiques')
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div className="admin-reports">
@@ -52,6 +151,15 @@ export default function AdminReports() {
         .period-select:focus {
           outline: none;
           border-color: var(--accent);
+        }
+
+        .alert-error {
+          background-color: rgba(239, 68, 68, 0.1);
+          border: 1px solid var(--error);
+          border-radius: 6px;
+          padding: 1rem;
+          color: var(--error);
+          margin-bottom: 1rem;
         }
 
         .stats-grid {
@@ -148,6 +256,14 @@ export default function AdminReports() {
           transition: width 0.5s ease;
         }
 
+        .empty-state {
+          text-align: center;
+          padding: 3rem;
+          background-color: var(--bg-secondary);
+          border-radius: 8px;
+          color: var(--text-secondary);
+        }
+
         @media (max-width: 768px) {
           .admin-reports {
             padding: 1rem;
@@ -179,7 +295,13 @@ export default function AdminReports() {
         </select>
       </div>
 
-      {stats && (
+      {error && <div className="alert-error">{error}</div>}
+
+      {loading ? (
+        <div className="empty-state">
+          <p>Chargement...</p>
+        </div>
+      ) : stats ? (
         <>
           <div className="stats-grid">
             <div className="stat-card">
@@ -217,7 +339,7 @@ export default function AdminReports() {
                   <span className="bar-label-value">{(stats.paidAmount / 1000000).toFixed(1)}M Ar</span>
                 </div>
                 <div className="bar">
-                  <div className="bar-fill" style={{ width: `${(stats.paidAmount / stats.totalRevenue) * 100}%` }}></div>
+                  <div className="bar-fill" style={{ width: `${stats.totalRevenue > 0 ? (stats.paidAmount / stats.totalRevenue) * 100 : 0}%` }}></div>
                 </div>
               </div>
 
@@ -227,7 +349,7 @@ export default function AdminReports() {
                   <span className="bar-label-value">{(stats.deliveredAmount / 1000000).toFixed(1)}M Ar</span>
                 </div>
                 <div className="bar">
-                  <div className="bar-fill" style={{ width: `${(stats.deliveredAmount / stats.totalRevenue) * 100}%` }}></div>
+                  <div className="bar-fill" style={{ width: `${stats.totalRevenue > 0 ? (stats.deliveredAmount / stats.totalRevenue) * 100 : 0}%` }}></div>
                 </div>
               </div>
 
@@ -237,7 +359,7 @@ export default function AdminReports() {
                   <span className="bar-label-value">{(stats.pendingAmount / 1000000).toFixed(1)}M Ar</span>
                 </div>
                 <div className="bar">
-                  <div className="bar-fill" style={{ width: `${(stats.pendingAmount / stats.totalRevenue) * 100}%` }}></div>
+                  <div className="bar-fill" style={{ width: `${stats.totalRevenue > 0 ? (stats.pendingAmount / stats.totalRevenue) * 100 : 0}%` }}></div>
                 </div>
               </div>
             </div>
@@ -261,6 +383,10 @@ export default function AdminReports() {
             </div>
           </div>
         </>
+      ) : (
+        <div className="empty-state">
+          <p>Aucune donnée disponible pour cette période</p>
+        </div>
       )}
     </div>
   )
