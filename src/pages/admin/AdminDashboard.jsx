@@ -1,29 +1,27 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { useAuth } from '../../hooks/useAuth'
 
-export default function DashboardPage() {
-  const { user, profile } = useAuth()
+export default function AdminDashboard() {
   const [stats, setStats] = useState({
     totalInvoices: 0,
-    pendingInvoices: 0,
-    totalClients: 0,
-    lowStockItems: 0,
+    pendingValidation: 0,
+    totalUsers: 0,
+    totalRevenue: 0,
   })
 
   useEffect(() => {
     setStats({
-      totalInvoices: 12,
-      pendingInvoices: 3,
-      totalClients: 24,
-      lowStockItems: 5,
+      totalInvoices: 156,
+      pendingValidation: 8,
+      totalUsers: 24,
+      totalRevenue: 2500000,
     })
   }, [])
 
   return (
-    <div className="dashboard-container">
+    <div className="admin-dashboard">
       <style>{`
-        .dashboard-container {
+        .admin-dashboard {
           padding: 2rem;
         }
 
@@ -64,7 +62,7 @@ export default function DashboardPage() {
         }
 
         .stat-icon {
-          font-size: 2rem;
+          font-size: 2.5rem;
           margin-bottom: 1rem;
         }
 
@@ -80,7 +78,7 @@ export default function DashboardPage() {
           font-size: 0.95rem;
         }
 
-        .dashboard-section {
+        .section {
           margin-bottom: 3rem;
         }
 
@@ -99,7 +97,7 @@ export default function DashboardPage() {
           gap: 1rem;
         }
 
-        .action-btn {
+        .action-card {
           background-color: var(--bg-secondary);
           border: 1px solid var(--border-light);
           border-radius: 8px;
@@ -111,7 +109,7 @@ export default function DashboardPage() {
           color: var(--text-primary);
         }
 
-        .action-btn:hover {
+        .action-card:hover {
           background-color: var(--bg-tertiary);
           border-color: var(--accent);
           color: var(--accent);
@@ -128,7 +126,7 @@ export default function DashboardPage() {
         }
 
         @media (max-width: 768px) {
-          .dashboard-container {
+          .admin-dashboard {
             padding: 1rem;
           }
 
@@ -144,57 +142,62 @@ export default function DashboardPage() {
       `}</style>
 
       <div className="dashboard-header">
-        <h1 className="dashboard-title">Tableau de bord</h1>
-        <p className="dashboard-subtitle">Bienvenue, {profile?.companyName}</p>
+        <h1 className="dashboard-title">Tableau de bord Admin</h1>
+        <p className="dashboard-subtitle">Gestion globale du système</p>
       </div>
 
       <div className="stats-grid">
         <div className="stat-card">
           <div className="stat-icon">📋</div>
           <div className="stat-value">{stats.totalInvoices}</div>
-          <div className="stat-label">Factures créées</div>
+          <div className="stat-label">Factures totales</div>
         </div>
 
         <div className="stat-card">
           <div className="stat-icon">⏳</div>
-          <div className="stat-value">{stats.pendingInvoices}</div>
+          <div className="stat-value">{stats.pendingValidation}</div>
           <div className="stat-label">En attente de validation</div>
         </div>
 
         <div className="stat-card">
           <div className="stat-icon">👥</div>
-          <div className="stat-value">{stats.totalClients}</div>
-          <div className="stat-label">Clients</div>
+          <div className="stat-value">{stats.totalUsers}</div>
+          <div className="stat-label">Revendeurs actifs</div>
         </div>
 
         <div className="stat-card">
-          <div className="stat-icon">📦</div>
-          <div className="stat-value">{stats.lowStockItems}</div>
-          <div className="stat-label">Articles en faible stock</div>
+          <div className="stat-icon">💰</div>
+          <div className="stat-value">{(stats.totalRevenue / 1000000).toFixed(1)}M</div>
+          <div className="stat-label">Revenu total</div>
         </div>
       </div>
 
-      <div className="dashboard-section">
+      <div className="section">
         <h2 className="section-title">Actions rapides</h2>
         <div className="actions-grid">
-          <Link to="/invoices/create" className="action-btn">
-            <div className="action-icon">+</div>
-            <div className="action-text">Créer une facture</div>
+          <Link to="/admin/pending" className="action-card">
+            <div className="action-icon">✓</div>
+            <div className="action-text">Valider factures</div>
           </Link>
 
-          <Link to="/clients" className="action-btn">
-            <div className="action-icon">👥</div>
-            <div className="action-text">Ajouter un client</div>
-          </Link>
-
-          <Link to="/stock" className="action-btn">
-            <div className="action-icon">📦</div>
-            <div className="action-text">Gérer le stock</div>
-          </Link>
-
-          <Link to="/invoices" className="action-btn">
+          <Link to="/admin/invoices" className="action-card">
             <div className="action-icon">📋</div>
-            <div className="action-text">Voir les factures</div>
+            <div className="action-text">Toutes les factures</div>
+          </Link>
+
+          <Link to="/admin/stock" className="action-card">
+            <div className="action-icon">📦</div>
+            <div className="action-text">Gestion stock</div>
+          </Link>
+
+          <Link to="/admin/users" className="action-card">
+            <div className="action-icon">👥</div>
+            <div className="action-text">Utilisateurs</div>
+          </Link>
+
+          <Link to="/admin/reports" className="action-card">
+            <div className="action-icon">📊</div>
+            <div className="action-text">Rapports</div>
           </Link>
         </div>
       </div>
