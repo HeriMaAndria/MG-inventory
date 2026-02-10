@@ -6,6 +6,7 @@
 /* 1. Base */
 @import './_variables.css';
 @import './_reset.css';
+@import './global.css';
 
 /* 2. Layout */
 @import './layout/app-layout.css';
