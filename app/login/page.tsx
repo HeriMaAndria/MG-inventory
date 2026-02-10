@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 /**
  * PAGE DE CONNEXION
@@ -18,12 +19,17 @@ import { useRouter } from 'next/navigation'
  * CONCEPTS :
  * - 'use client' = ce composant s'exécute côté navigateur
  * - useState = pour gérer l'état du formulaire
+ * - useEffect = pour initialiser Supabase uniquement côté client
  * - async/await = pour les appels réseau
+ * 
+ * CORRECTIF :
+ * - Supabase initialisé dans useEffect pour éviter les erreurs de build SSG
+ * - Affichage d'un loader pendant l'initialisation
  */
 
 export default function LoginPage() {
   const router = useRouter()
-  const supabase = createClient()
+  const [supabase, setSupabase] = useState<SupabaseClient | null>(null)
 
   // États du formulaire
   const [email, setEmail] = useState('')
@@ -32,10 +38,24 @@ export default function LoginPage() {
   const [error, setError] = useState('')
 
   /**
+   * Initialise le client Supabase uniquement côté client
+   * pour éviter les problèmes de build avec les variables d'environnement
+   */
+  useEffect(() => {
+    setSupabase(createClient())
+  }, [])
+
+  /**
    * Fonction appelée quand le formulaire est soumis
    */
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault() // Empêche le rechargement de la page
+    
+    if (!supabase) {
+      setError('Client Supabase non initialisé')
+      return
+    }
+
     setError('') // Reset les erreurs
     setLoading(true) // Affiche le loader
 
@@ -65,6 +85,18 @@ export default function LoginPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  // Affiche un loader pendant l'initialisation de Supabase
+  if (!supabase) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Chargement...</p>
+        </div>
+      </div>
+    )
   }
 
   return (

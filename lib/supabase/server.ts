@@ -28,14 +28,20 @@ export async function createClient() {
           try {
             cookieStore.set({ name, value, ...options })
           } catch (error) {
-            // Erreur ignorée : set() n'est pas disponible dans les Middleware
+            // En dev, logger l'erreur pour debugging
+            if (process.env.NODE_ENV === 'development') {
+              console.warn('⚠️ Cookie set failed (peut être normal dans certains contextes):', error)
+            }
           }
         },
         remove(name: string, options: CookieOptions) {
           try {
             cookieStore.set({ name, value: '', ...options })
           } catch (error) {
-            // Erreur ignorée
+            // En dev, logger l'erreur pour debugging
+            if (process.env.NODE_ENV === 'development') {
+              console.warn('⚠️ Cookie remove failed (peut être normal dans certains contextes):', error)
+            }
           }
         },
       },
