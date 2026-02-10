@@ -1,40 +1,37 @@
-# Logs
-logs
-*.log
+# Dépendances
+node_modules/
+.pnp
+.pnp.js
+
+# Tests
+coverage/
+
+# Next.js
+.next/
+out/
+build/
+dist/
+
+# Fichiers de debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
 
-node_modules
-.DS_Store
-dist
-dist-ssr
-coverage
-*.local
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.project
-.classpath
-.c9/
-*.launch
-.settings/
-*.sublime-workspace
-
-# vite
+# Variables d'environnement (IMPORTANT)
 .env
 .env.local
-.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
 
-# IDE
-.vscode/
-.idea/
-
-# macOS
-.DS_Store
+# Vercel
 .vercel
-.env*.local
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Système
+.DS_Store
+*.pem
+Thumbs.db
