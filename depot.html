@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aperçu Facture - Factures Pro</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/depot.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <h1 class="nav-brand">📋 Factures Pro</h1>
+            <div class="nav-links">
+                <a href="index.html" class="nav-link">Tableau de bord</a>
+                <a href="create.html" class="nav-link">Nouvelle facture</a>
+                <a href="depot.html" class="nav-link active">Aperçu factures</a>
+                <a href="clients.html" class="nav-link">Clients</a>
+                <a href="stock.html" class="nav-link">Stock</a>
+            </div>
+        </div>
+    </nav>
+
+    <div id="sidebar" class="sidebar">
+        <div class="sidebar-header">
+            <h3>📋 Factures</h3>
+            <button class="btn-toggle-sidebar" onclick="toggleSidebar()">✕</button>
+        </div>
+        <div class="sidebar-search">
+            <input type="text" id="sidebarSearch" placeholder="🔍 Rechercher..." oninput="filterSidebarInvoices()">
+        </div>
+        <div class="sidebar-list" id="sidebarList"></div>
+    </div>
+
+    <div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+    <button id="btnOpenSidebar" class="btn-open-sidebar" onclick="toggleSidebar()">
+        📋 Factures
+    </button>
+
+    <div class="main-content" id="mainContent">
+        <div class="preview-toolbar">
+            <div class="toolbar-left">
+                <button class="btn btn-secondary" onclick="editInvoice()">✏️ Modifier</button>
+            </div>
+            <div class="toolbar-actions">
+                <button class="btn btn-primary" onclick="printInvoice()">🖨️ Imprimer</button>
+                <button class="btn btn-success" onclick="downloadPDF()">📥 Télécharger PDF</button>
+            </div>
+        </div>
+        
+        <div class="preview-container">
+            <div id="invoicePreview" class="invoice-paper"></div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="js/database.js"></script>
+    <script src="js/depot.js"></script>
+</body>
+</html>
