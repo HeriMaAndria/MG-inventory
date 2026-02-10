@@ -76,9 +76,11 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Si pas connecté et essaie d'accéder à une route protégée
-  if (!user && pathname.startsWith('/admin') || 
-      !user && pathname.startsWith('/gerant') ||
-      !user && pathname.startsWith('/revendeur')) {
+  if (!user && (
+    pathname.startsWith('/admin') || 
+    pathname.startsWith('/gerant') ||
+    pathname.startsWith('/revendeur')
+  )) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
