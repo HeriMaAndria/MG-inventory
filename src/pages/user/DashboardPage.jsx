@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { useAuth } from '../hooks/useAuth'
-import { InvoiceService } from '../services/invoiceService'
-import '../styles/dashboard.css'
+import { useAuth } from '../../hooks/useAuth'
+import { InvoiceService } from '../../services/invoiceService'
+import '../../styles/dashboard.css'
 
 export default function DashboardPage() {
   const { profile, isAdmin } = useAuth()
