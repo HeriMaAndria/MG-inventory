@@ -1,17 +1,35 @@
 import { useState, useEffect } from 'react'
+import { supabase } from '../../services/supabase'
 
 export default function AllInvoices() {
   const [invoices, setInvoices] = useState([])
+  const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
+  const [error, setError] = useState('')
 
+  // Charger toutes les factures depuis Supabase (Admin)
   useEffect(() => {
-    setInvoices([
-      { id: 1, officialNumber: 'FACT-2025-001', revendeur: 'Boutique A', client: 'Client A', date: '2025-02-10', total: 42500, status: 'confirmed' },
-      { id: 2, officialNumber: 'FACT-2025-002', revendeur: 'Boutique B', client: 'Client B', date: '2025-02-09', total: 15000, status: 'paid' },
-      { id: 3, officialNumber: 'FACT-2025-003', revendeur: 'Boutique A', client: 'Client C', date: '2025-02-08', total: 28000, status: 'sent' },
-      { id: 4, draftNumber: 'BRO-REF004-2025-004', revendeur: 'Boutique C', client: 'Client D', date: '2025-02-07', total: 35000, status: 'pending' },
-    ])
+    loadInvoices()
   }, [])
+
+  const loadInvoices = async () => {
+    try {
+      setLoading(true)
+      const { data, error: err } = await supabase
+        .from('invoices')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (err) throw err
+      setInvoices(data || [])
+      setError('')
+    } catch (err) {
+      setError('Erreur lors du chargement des factures')
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const filteredInvoices = filter === 'all'
     ? invoices
@@ -39,10 +57,19 @@ export default function AllInvoices() {
     returned: '#ef4444'
   }
 
-  const handleStatusChange = (id, newStatus) => {
-    setInvoices(invoices.map(inv =>
-      inv.id === id ? { ...inv, status: newStatus } : inv
-    ))
+  const handleStatusChange = async (id, newStatus) => {
+    try {
+      const { error: err } = await supabase
+        .from('invoices')
+        .update({ status: newStatus })
+        .eq('id', id)
+
+      if (err) throw err
+      loadInvoices()
+    } catch (err) {
+      setError('Erreur lors de la mise à jour')
+      console.error(err)
+    }
   }
 
   return (
@@ -57,6 +84,15 @@ export default function AllInvoices() {
           font-weight: 700;
           color: var(--text-primary);
           margin-bottom: 2rem;
+        }
+
+        .alert-error {
+          background-color: rgba(239, 68, 68, 0.1);
+          border: 1px solid var(--error);
+          border-radius: 6px;
+          padding: 1rem;
+          color: var(--error);
+          margin-bottom: 1rem;
         }
 
         .filters {
@@ -177,6 +213,8 @@ export default function AllInvoices() {
 
       <h1 className="page-title">Toutes les Factures</h1>
 
+      {error && <div className="alert-error">{error}</div>}
+
       <div className="filters">
         <button
           className={`filter-btn ${filter === 'all' ? 'active' : ''}`}
@@ -204,7 +242,9 @@ export default function AllInvoices() {
         </button>
       </div>
 
-      {filteredInvoices.length === 0 ? (
+      {loading ? (
+        <div className="empty-state">Chargement...</div>
+      ) : filteredInvoices.length === 0 ? (
         <div className="empty-state">
           <p>Aucune facture trouvée</p>
         </div>
@@ -225,10 +265,10 @@ export default function AllInvoices() {
             {filteredInvoices.map(invoice => (
               <tr key={invoice.id}>
                 <td><strong>{invoice.officialNumber || invoice.draftNumber}</strong></td>
-                <td>{invoice.revendeur}</td>
-                <td>{invoice.client}</td>
+                <td>{invoice.referenceNumber || '-'}</td>
+                <td>{invoice.client?.name}</td>
                 <td>{new Date(invoice.date).toLocaleDateString('fr-FR')}</td>
-                <td>{invoice.total.toLocaleString('fr-FR')} Ar</td>
+                <td>{invoice.total?.toLocaleString('fr-FR')} Ar</td>
                 <td>
                   <span
                     className="status-badge"

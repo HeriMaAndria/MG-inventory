@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../hooks/useAuth'
+import { supabase } from '../../services/supabase'
 
 export default function ClientsPage() {
   const { user } = useAuth()
@@ -7,6 +8,7 @@ export default function ClientsPage() {
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState(null)
+  const [error, setError] = useState('')
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -15,13 +17,30 @@ export default function ClientsPage() {
     notes: '',
   })
 
+  // Charger les clients depuis Supabase
   useEffect(() => {
-    setLoading(false)
-    setClients([
-      { id: 1, name: 'Client A', phone: '034 XX XX XX', address: 'Tana', email: 'client@example.com', totalPurchases: 5, lastPurchase: '2025-02-05' },
-      { id: 2, name: 'Client B', phone: '032 XX XX XX', address: 'Antsirabe', email: '', totalPurchases: 3, lastPurchase: '2025-01-20' },
-    ])
-  }, [])
+    loadClients()
+  }, [user])
+
+  const loadClients = async () => {
+    try {
+      setLoading(true)
+      const { data, error: err } = await supabase
+        .from('clients')
+        .select('*')
+        .eq('userId', user.id)
+        .order('created_at', { ascending: false })
+
+      if (err) throw err
+      setClients(data || [])
+      setError('')
+    } catch (err) {
+      setError('Erreur lors du chargement des clients')
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleAddClick = () => {
     setEditingId(null)
@@ -35,19 +54,48 @@ export default function ClientsPage() {
     setShowForm(true)
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    if (editingId) {
-      setClients(clients.map(client => client.id === editingId ? { ...client, ...formData } : client))
-    } else {
-      setClients([...clients, { ...formData, id: Date.now(), totalPurchases: 0, lastPurchase: null }])
+    try {
+      if (editingId) {
+        // Mise à jour
+        const { error: err } = await supabase
+          .from('clients')
+          .update(formData)
+          .eq('id', editingId)
+
+        if (err) throw err
+      } else {
+        // Création
+        const { error: err } = await supabase
+          .from('clients')
+          .insert([{ ...formData, userId: user.id }])
+
+        if (err) throw err
+      }
+
+      setShowForm(false)
+      loadClients()
+    } catch (err) {
+      setError('Erreur lors de la sauvegarde')
+      console.error(err)
     }
-    setShowForm(false)
   }
 
-  const handleDelete = (id) => {
-    if (window.confirm('Êtes-vous sûr?')) {
-      setClients(clients.filter(client => client.id !== id))
+  const handleDelete = async (id) => {
+    if (!window.confirm('Êtes-vous sûr?')) return
+
+    try {
+      const { error: err } = await supabase
+        .from('clients')
+        .delete()
+        .eq('id', id)
+
+      if (err) throw err
+      loadClients()
+    } catch (err) {
+      setError('Erreur lors de la suppression')
+      console.error(err)
     }
   }
 
@@ -86,6 +134,15 @@ export default function ClientsPage() {
 
         .add-btn:hover {
           background-color: var(--accent-light);
+        }
+
+        .alert-error {
+          background-color: rgba(239, 68, 68, 0.1);
+          border: 1px solid var(--error);
+          border-radius: 6px;
+          padding: 1rem;
+          color: var(--error);
+          margin-bottom: 1rem;
         }
 
         .modal {
@@ -311,6 +368,8 @@ export default function ClientsPage() {
         </button>
       </div>
 
+      {error && <div className="alert-error">{error}</div>}
+
       {loading ? (
         <div className="empty-state">
           <div className="empty-text">Chargement...</div>
@@ -330,8 +389,7 @@ export default function ClientsPage() {
               <th>Nom</th>
               <th>Téléphone</th>
               <th>Adresse</th>
-              <th>Achats</th>
-              <th>Dernier Achat</th>
+              <th>Email</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -341,8 +399,7 @@ export default function ClientsPage() {
                 <td><strong>{client.name}</strong></td>
                 <td>{client.phone}</td>
                 <td>{client.address}</td>
-                <td>{client.totalPurchases}</td>
-                <td>{client.lastPurchase ? new Date(client.lastPurchase).toLocaleDateString('fr-FR') : '-'}</td>
+                <td>{client.email}</td>
                 <td className="actions-cell">
                   <button className="action-btn" onClick={() => handleEditClick(client)}>
                     Modifier

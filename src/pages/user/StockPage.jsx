@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../hooks/useAuth'
+import { supabase } from '../../services/supabase'
 
 export default function StockPage() {
   const { user } = useAuth()
@@ -7,6 +8,7 @@ export default function StockPage() {
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState(null)
+  const [error, setError] = useState('')
   const [formData, setFormData] = useState({
     name: '',
     reference: '',
@@ -18,13 +20,30 @@ export default function StockPage() {
     unit: 'pièce',
   })
 
+  // Charger le stock depuis Supabase
   useEffect(() => {
-    setLoading(false)
-    setStock([
-      { id: 1, name: 'Produit A', reference: 'REF001', category: 'Electronique', purchasePrice: 5000, salePrice: 7000, quantity: 50, minQuantity: 5, unit: 'pièce' },
-      { id: 2, name: 'Produit B', reference: 'REF002', category: 'Vêtements', purchasePrice: 2000, salePrice: 4000, quantity: 3, minQuantity: 10, unit: 'pièce' },
-    ])
-  }, [])
+    loadStock()
+  }, [user])
+
+  const loadStock = async () => {
+    try {
+      setLoading(true)
+      const { data, error: err } = await supabase
+        .from('stock')
+        .select('*')
+        .eq('userId', user.id)
+        .order('created_at', { ascending: false })
+
+      if (err) throw err
+      setStock(data || [])
+      setError('')
+    } catch (err) {
+      setError('Erreur lors du chargement du stock')
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleAddClick = () => {
     setEditingId(null)
@@ -47,19 +66,48 @@ export default function StockPage() {
     setShowForm(true)
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    if (editingId) {
-      setStock(stock.map(item => item.id === editingId ? { ...formData, id: editingId } : item))
-    } else {
-      setStock([...stock, { ...formData, id: Date.now() }])
+    try {
+      if (editingId) {
+        // Mise à jour
+        const { error: err } = await supabase
+          .from('stock')
+          .update(formData)
+          .eq('id', editingId)
+
+        if (err) throw err
+      } else {
+        // Création
+        const { error: err } = await supabase
+          .from('stock')
+          .insert([{ ...formData, userId: user.id }])
+
+        if (err) throw err
+      }
+
+      setShowForm(false)
+      loadStock()
+    } catch (err) {
+      setError('Erreur lors de la sauvegarde')
+      console.error(err)
     }
-    setShowForm(false)
   }
 
-  const handleDelete = (id) => {
-    if (window.confirm('Êtes-vous sûr?')) {
-      setStock(stock.filter(item => item.id !== id))
+  const handleDelete = async (id) => {
+    if (!window.confirm('Êtes-vous sûr?')) return
+
+    try {
+      const { error: err } = await supabase
+        .from('stock')
+        .delete()
+        .eq('id', id)
+
+      if (err) throw err
+      loadStock()
+    } catch (err) {
+      setError('Erreur lors de la suppression')
+      console.error(err)
     }
   }
 
@@ -112,6 +160,15 @@ export default function StockPage() {
           border-radius: 6px;
           padding: 1rem;
           color: var(--warning);
+          margin-bottom: 1rem;
+        }
+
+        .alert-error {
+          background-color: rgba(239, 68, 68, 0.1);
+          border: 1px solid var(--error);
+          border-radius: 6px;
+          padding: 1rem;
+          color: var(--error);
           margin-bottom: 1rem;
         }
 
@@ -367,6 +424,8 @@ export default function StockPage() {
         </button>
       </div>
 
+      {error && <div className="alert-error">{error}</div>}
+
       {lowStockItems.length > 0 && (
         <div className="alerts">
           <div className="alert-low-stock">
@@ -407,8 +466,8 @@ export default function StockPage() {
                 <td><strong>{item.name}</strong></td>
                 <td><span className="category-badge">{item.category}</span></td>
                 <td>{item.reference}</td>
-                <td>{item.purchasePrice.toLocaleString('fr-FR')} Ar</td>
-                <td>{item.salePrice.toLocaleString('fr-FR')} Ar</td>
+                <td>{item.purchasePrice?.toLocaleString('fr-FR')} Ar</td>
+                <td>{item.salePrice?.toLocaleString('fr-FR')} Ar</td>
                 <td className={`quantity ${item.quantity <= item.minQuantity ? 'low' : ''}`}>
                   {item.quantity} {item.unit}
                 </td>

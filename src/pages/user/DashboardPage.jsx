@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
+import { supabase } from '../../services/supabase'
 
 export default function DashboardPage() {
   const { user, profile } = useAuth()
@@ -10,15 +11,56 @@ export default function DashboardPage() {
     totalClients: 0,
     lowStockItems: 0,
   })
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    setStats({
-      totalInvoices: 12,
-      pendingInvoices: 3,
-      totalClients: 24,
-      lowStockItems: 5,
-    })
-  }, [])
+    loadStats()
+  }, [user])
+
+  const loadStats = async () => {
+    try {
+      setLoading(true)
+
+      // Compter les factures
+      const { count: invoicesCount } = await supabase
+        .from('invoices')
+        .select('*', { count: 'exact' })
+        .eq('userId', user.id)
+
+      const { count: pendingCount } = await supabase
+        .from('invoices')
+        .select('*', { count: 'exact' })
+        .eq('userId', user.id)
+        .eq('status', 'pending')
+
+      // Compter les clients
+      const { count: clientsCount } = await supabase
+        .from('clients')
+        .select('*', { count: 'exact' })
+        .eq('userId', user.id)
+
+      // Compter les articles en faible stock
+      const { data: lowStockData } = await supabase
+        .from('stock')
+        .select('*')
+        .eq('userId', user.id)
+
+      const lowStockCount = lowStockData?.filter(
+        item => item.quantity <= item.minQuantity
+      ).length || 0
+
+      setStats({
+        totalInvoices: invoicesCount || 0,
+        pendingInvoices: pendingCount || 0,
+        totalClients: clientsCount || 0,
+        lowStockItems: lowStockCount,
+      })
+    } catch (err) {
+      console.error('Erreur lors du chargement des statistiques:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div className="dashboard-container">
@@ -148,56 +190,64 @@ export default function DashboardPage() {
         <p className="dashboard-subtitle">Bienvenue, {profile?.companyName}</p>
       </div>
 
-      <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-icon">📋</div>
-          <div className="stat-value">{stats.totalInvoices}</div>
-          <div className="stat-label">Factures créées</div>
+      {loading ? (
+        <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '2rem' }}>
+          Chargement...
         </div>
+      ) : (
+        <>
+          <div className="stats-grid">
+            <div className="stat-card">
+              <div className="stat-icon">📋</div>
+              <div className="stat-value">{stats.totalInvoices}</div>
+              <div className="stat-label">Factures créées</div>
+            </div>
 
-        <div className="stat-card">
-          <div className="stat-icon">⏳</div>
-          <div className="stat-value">{stats.pendingInvoices}</div>
-          <div className="stat-label">En attente de validation</div>
-        </div>
+            <div className="stat-card">
+              <div className="stat-icon">⏳</div>
+              <div className="stat-value">{stats.pendingInvoices}</div>
+              <div className="stat-label">En attente de validation</div>
+            </div>
 
-        <div className="stat-card">
-          <div className="stat-icon">👥</div>
-          <div className="stat-value">{stats.totalClients}</div>
-          <div className="stat-label">Clients</div>
-        </div>
+            <div className="stat-card">
+              <div className="stat-icon">👥</div>
+              <div className="stat-value">{stats.totalClients}</div>
+              <div className="stat-label">Clients</div>
+            </div>
 
-        <div className="stat-card">
-          <div className="stat-icon">📦</div>
-          <div className="stat-value">{stats.lowStockItems}</div>
-          <div className="stat-label">Articles en faible stock</div>
-        </div>
-      </div>
+            <div className="stat-card">
+              <div className="stat-icon">📦</div>
+              <div className="stat-value">{stats.lowStockItems}</div>
+              <div className="stat-label">Articles en faible stock</div>
+            </div>
+          </div>
 
-      <div className="dashboard-section">
-        <h2 className="section-title">Actions rapides</h2>
-        <div className="actions-grid">
-          <Link to="/invoices/create" className="action-btn">
-            <div className="action-icon">+</div>
-            <div className="action-text">Créer une facture</div>
-          </Link>
+          <div className="dashboard-section">
+            <h2 className="section-title">Actions rapides</h2>
+            <div className="actions-grid">
+              <Link to="/invoices/create" className="action-btn">
+                <div className="action-icon">+</div>
+                <div className="action-text">Créer une facture</div>
+              </Link>
 
-          <Link to="/clients" className="action-btn">
-            <div className="action-icon">👥</div>
-            <div className="action-text">Ajouter un client</div>
-          </Link>
+              <Link to="/clients" className="action-btn">
+                <div className="action-icon">👥</div>
+                <div className="action-text">Ajouter un client</div>
+              </Link>
 
-          <Link to="/stock" className="action-btn">
-            <div className="action-icon">📦</div>
-            <div className="action-text">Gérer le stock</div>
-          </Link>
+              <Link to="/stock" className="action-btn">
+                <div className="action-icon">📦</div>
+                <div className="action-text">Gérer le stock</div>
+              </Link>
 
-          <Link to="/invoices" className="action-btn">
-            <div className="action-icon">📋</div>
-            <div className="action-text">Voir les factures</div>
-          </Link>
-        </div>
-      </div>
+              <Link to="/invoices" className="action-btn">
+                <div className="action-icon">📋</div>
+                <div className="action-text">Voir les factures</div>
+              </Link>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }

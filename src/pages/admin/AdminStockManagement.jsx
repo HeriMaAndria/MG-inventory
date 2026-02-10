@@ -1,16 +1,33 @@
 import { useState, useEffect } from 'react'
+import { supabase } from '../../services/supabase'
 
 export default function AdminStockManagement() {
   const [stock, setStock] = useState([])
-  const [filter, setFilter] = useState('all')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    setStock([
-      { id: 1, name: 'Produit A', category: 'Electronique', purchasePrice: 5000, proposedPrice: 6000, totalQuantity: 150, revendeurs: 3, margin: 1000 },
-      { id: 2, name: 'Produit B', category: 'Vêtements', purchasePrice: 2000, proposedPrice: 2500, totalQuantity: 45, revendeurs: 2, margin: 500 },
-      { id: 3, name: 'Produit C', category: 'Accessoires', purchasePrice: 1500, proposedPrice: 2000, totalQuantity: 200, revendeurs: 5, margin: 500 },
-    ])
+    loadStock()
   }, [])
+
+  const loadStock = async () => {
+    try {
+      setLoading(true)
+      const { data, error: err } = await supabase
+        .from('stock')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (err) throw err
+      setStock(data || [])
+      setError('')
+    } catch (err) {
+      setError('Erreur lors du chargement du stock')
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div className="admin-stock">
@@ -26,29 +43,13 @@ export default function AdminStockManagement() {
           margin-bottom: 2rem;
         }
 
-        .filters {
-          display: flex;
-          gap: 0.5rem;
-          margin-bottom: 2rem;
-          flex-wrap: wrap;
-        }
-
-        .filter-btn {
-          padding: 0.5rem 1rem;
-          background-color: var(--bg-secondary);
-          color: var(--text-secondary);
-          border: 1px solid var(--border-light);
-          border-radius: 4px;
-          cursor: pointer;
-          transition: var(--transition-fast);
-          font-weight: 500;
-        }
-
-        .filter-btn:hover,
-        .filter-btn.active {
-          background-color: var(--accent);
-          color: #000;
-          border-color: var(--accent);
+        .alert-error {
+          background-color: rgba(239, 68, 68, 0.1);
+          border: 1px solid var(--error);
+          border-radius: 6px;
+          padding: 1rem;
+          color: var(--error);
+          margin-bottom: 1rem;
         }
 
         .stock-table {
@@ -98,6 +99,15 @@ export default function AdminStockManagement() {
           font-weight: 600;
         }
 
+        .empty-state {
+          text-align: center;
+          padding: 3rem;
+          background-color: var(--bg-secondary);
+          border-radius: 8px;
+          border: 1px solid var(--border-light);
+          color: var(--text-secondary);
+        }
+
         @media (max-width: 768px) {
           .admin-stock {
             padding: 1rem;
@@ -120,44 +130,42 @@ export default function AdminStockManagement() {
 
       <h1 className="page-title">Gestion du Stock Global</h1>
 
-      <div className="filters">
-        <button className={`filter-btn ${filter === 'all' ? 'active' : ''}`} onClick={() => setFilter('all')}>
-          Tous les articles ({stock.length})
-        </button>
-        <button className={`filter-btn ${filter === 'high' ? 'active' : ''}`} onClick={() => setFilter('high')}>
-          Stock élevé
-        </button>
-        <button className={`filter-btn ${filter === 'low' ? 'active' : ''}`} onClick={() => setFilter('low')}>
-          Stock faible
-        </button>
-      </div>
+      {error && <div className="alert-error">{error}</div>}
 
-      <table className="stock-table">
-        <thead>
-          <tr>
-            <th>Nom</th>
-            <th>Catégorie</th>
-            <th>P. Achat</th>
-            <th>P. Proposé</th>
-            <th>Marge</th>
-            <th>Quantité Totale</th>
-            <th>Revendeurs</th>
-          </tr>
-        </thead>
-        <tbody>
-          {stock.map(item => (
-            <tr key={item.id}>
-              <td><strong>{item.name}</strong></td>
-              <td><span className="category-badge">{item.category}</span></td>
-              <td>{item.purchasePrice.toLocaleString('fr-FR')} Ar</td>
-              <td>{item.proposedPrice.toLocaleString('fr-FR')} Ar</td>
-              <td className="margin-badge">{item.margin.toLocaleString('fr-FR')} Ar</td>
-              <td>{item.totalQuantity} pièces</td>
-              <td>{item.revendeurs} revendeurs</td>
+      {loading ? (
+        <div className="empty-state">Chargement...</div>
+      ) : stock.length === 0 ? (
+        <div className="empty-state">
+          <p>Aucun article en stock</p>
+        </div>
+      ) : (
+        <table className="stock-table">
+          <thead>
+            <tr>
+              <th>Nom</th>
+              <th>Catégorie</th>
+              <th>P. Achat</th>
+              <th>P. Vente</th>
+              <th>Quantité</th>
+              <th>Unité</th>
+              <th>Créé le</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {stock.map(item => (
+              <tr key={item.id}>
+                <td><strong>{item.name}</strong></td>
+                <td><span className="category-badge">{item.category}</span></td>
+                <td>{item.purchasePrice?.toLocaleString('fr-FR')} Ar</td>
+                <td>{item.salePrice?.toLocaleString('fr-FR')} Ar</td>
+                <td>{item.quantity}</td>
+                <td>{item.unit}</td>
+                <td>{new Date(item.created_at).toLocaleDateString('fr-FR')}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   )
 }

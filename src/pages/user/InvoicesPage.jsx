@@ -1,31 +1,42 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
-import { InvoiceService } from '../../services/invoiceService'
+import { supabase } from '../../services/supabase'
 
 export default function InvoicesPage() {
   const { user } = useAuth()
   const [invoices, setInvoices] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
+  const [error, setError] = useState('')
 
+  // Charger les factures depuis Supabase
   useEffect(() => {
-    const loadInvoices = async () => {
-      try {
-        const data = await InvoiceService.getMyInvoices(user.id)
-        setInvoices(data || [])
-      } catch (err) {
-        console.error('Erreur chargement factures:', err)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    if (user) loadInvoices()
+    loadInvoices()
   }, [user])
 
-  const filteredInvoices = filter === 'all' 
-    ? invoices 
+  const loadInvoices = async () => {
+    try {
+      setLoading(true)
+      const { data, error: err } = await supabase
+        .from('invoices')
+        .select('*')
+        .eq('userId', user.id)
+        .order('created_at', { ascending: false })
+
+      if (err) throw err
+      setInvoices(data || [])
+      setError('')
+    } catch (err) {
+      setError('Erreur lors du chargement des factures')
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const filteredInvoices = filter === 'all'
+    ? invoices
     : invoices.filter(inv => inv.status === filter)
 
   const getStatusLabel = (status) => {
@@ -119,6 +130,15 @@ export default function InvoicesPage() {
           background-color: var(--accent);
           color: #000;
           border-color: var(--accent);
+        }
+
+        .alert-error {
+          background-color: rgba(239, 68, 68, 0.1);
+          border: 1px solid var(--error);
+          border-radius: 6px;
+          padding: 1rem;
+          color: var(--error);
+          margin-bottom: 1rem;
         }
 
         .invoices-table {
@@ -242,26 +262,28 @@ export default function InvoicesPage() {
         </Link>
       </div>
 
+      {error && <div className="alert-error">{error}</div>}
+
       <div className="filter-buttons">
-        <button 
+        <button
           className={`filter-btn ${filter === 'all' ? 'active' : ''}`}
           onClick={() => setFilter('all')}
         >
           Toutes ({invoices.length})
         </button>
-        <button 
+        <button
           className={`filter-btn ${filter === 'draft' ? 'active' : ''}`}
           onClick={() => setFilter('draft')}
         >
           Brouillons
         </button>
-        <button 
+        <button
           className={`filter-btn ${filter === 'pending' ? 'active' : ''}`}
           onClick={() => setFilter('pending')}
         >
           En attente
         </button>
-        <button 
+        <button
           className={`filter-btn ${filter === 'confirmed' ? 'active' : ''}`}
           onClick={() => setFilter('confirmed')}
         >
@@ -296,12 +318,12 @@ export default function InvoicesPage() {
           <tbody>
             {filteredInvoices.map(invoice => (
               <tr key={invoice.id}>
-                <td>{invoice.officialNumber || invoice.draftNumber}</td>
+                <td><strong>{invoice.officialNumber || invoice.draftNumber}</strong></td>
                 <td>{new Date(invoice.date).toLocaleDateString('fr-FR')}</td>
                 <td>{invoice.client?.name}</td>
                 <td>{invoice.total?.toLocaleString('fr-FR')} Ar</td>
                 <td>
-                  <span 
+                  <span
                     className="status-badge"
                     style={{ backgroundColor: getStatusColor(invoice.status) }}
                   >

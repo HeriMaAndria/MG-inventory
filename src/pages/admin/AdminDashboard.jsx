@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { supabase } from '../../services/supabase'
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({
@@ -8,15 +9,52 @@ export default function AdminDashboard() {
     totalUsers: 0,
     totalRevenue: 0,
   })
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    setStats({
-      totalInvoices: 156,
-      pendingValidation: 8,
-      totalUsers: 24,
-      totalRevenue: 2500000,
-    })
+    loadStats()
   }, [])
+
+  const loadStats = async () => {
+    try {
+      setLoading(true)
+
+      // Compter toutes les factures
+      const { count: invoicesCount } = await supabase
+        .from('invoices')
+        .select('*', { count: 'exact' })
+
+      // Compter factures en attente
+      const { count: pendingCount } = await supabase
+        .from('invoices')
+        .select('*', { count: 'exact' })
+        .eq('status', 'pending')
+
+      // Compter utilisateurs
+      const { count: usersCount } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact' })
+
+      // Calculer revenu total
+      const { data: invoices } = await supabase
+        .from('invoices')
+        .select('total')
+        .eq('status', 'paid')
+
+      const totalRevenue = invoices?.reduce((sum, inv) => sum + (inv.total || 0), 0) || 0
+
+      setStats({
+        totalInvoices: invoicesCount || 0,
+        pendingValidation: pendingCount || 0,
+        totalUsers: usersCount || 0,
+        totalRevenue: totalRevenue,
+      })
+    } catch (err) {
+      console.error('Erreur lors du chargement des statistiques:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div className="admin-dashboard">
@@ -146,61 +184,69 @@ export default function AdminDashboard() {
         <p className="dashboard-subtitle">Gestion globale du système</p>
       </div>
 
-      <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-icon">📋</div>
-          <div className="stat-value">{stats.totalInvoices}</div>
-          <div className="stat-label">Factures totales</div>
+      {loading ? (
+        <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '2rem' }}>
+          Chargement...
         </div>
+      ) : (
+        <>
+          <div className="stats-grid">
+            <div className="stat-card">
+              <div className="stat-icon">📋</div>
+              <div className="stat-value">{stats.totalInvoices}</div>
+              <div className="stat-label">Factures totales</div>
+            </div>
 
-        <div className="stat-card">
-          <div className="stat-icon">⏳</div>
-          <div className="stat-value">{stats.pendingValidation}</div>
-          <div className="stat-label">En attente de validation</div>
-        </div>
+            <div className="stat-card">
+              <div className="stat-icon">⏳</div>
+              <div className="stat-value">{stats.pendingValidation}</div>
+              <div className="stat-label">En attente de validation</div>
+            </div>
 
-        <div className="stat-card">
-          <div className="stat-icon">👥</div>
-          <div className="stat-value">{stats.totalUsers}</div>
-          <div className="stat-label">Revendeurs actifs</div>
-        </div>
+            <div className="stat-card">
+              <div className="stat-icon">👥</div>
+              <div className="stat-value">{stats.totalUsers}</div>
+              <div className="stat-label">Revendeurs actifs</div>
+            </div>
 
-        <div className="stat-card">
-          <div className="stat-icon">💰</div>
-          <div className="stat-value">{(stats.totalRevenue / 1000000).toFixed(1)}M</div>
-          <div className="stat-label">Revenu total</div>
-        </div>
-      </div>
+            <div className="stat-card">
+              <div className="stat-icon">💰</div>
+              <div className="stat-value">{(stats.totalRevenue / 1000000).toFixed(1)}M</div>
+              <div className="stat-label">Revenu total</div>
+            </div>
+          </div>
 
-      <div className="section">
-        <h2 className="section-title">Actions rapides</h2>
-        <div className="actions-grid">
-          <Link to="/admin/pending" className="action-card">
-            <div className="action-icon">✓</div>
-            <div className="action-text">Valider factures</div>
-          </Link>
+          <div className="section">
+            <h2 className="section-title">Actions rapides</h2>
+            <div className="actions-grid">
+              <Link to="/admin/pending" className="action-card">
+                <div className="action-icon">✓</div>
+                <div className="action-text">Valider factures</div>
+              </Link>
 
-          <Link to="/admin/invoices" className="action-card">
-            <div className="action-icon">📋</div>
-            <div className="action-text">Toutes les factures</div>
-          </Link>
+              <Link to="/admin/invoices" className="action-card">
+                <div className="action-icon">📋</div>
+                <div className="action-text">Toutes les factures</div>
+              </Link>
 
-          <Link to="/admin/stock" className="action-card">
-            <div className="action-icon">📦</div>
-            <div className="action-text">Gestion stock</div>
-          </Link>
+              <Link to="/admin/stock" className="action-card">
+                <div className="action-icon">📦</div>
+                <div className="action-text">Gestion stock</div>
+              </Link>
 
-          <Link to="/admin/users" className="action-card">
-            <div className="action-icon">👥</div>
-            <div className="action-text">Utilisateurs</div>
-          </Link>
+              <Link to="/admin/users" className="action-card">
+                <div className="action-icon">👥</div>
+                <div className="action-text">Utilisateurs</div>
+              </Link>
 
-          <Link to="/admin/reports" className="action-card">
-            <div className="action-icon">📊</div>
-            <div className="action-text">Rapports</div>
-          </Link>
-        </div>
-      </div>
+              <Link to="/admin/reports" className="action-card">
+                <div className="action-icon">📊</div>
+                <div className="action-text">Rapports</div>
+              </Link>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }
