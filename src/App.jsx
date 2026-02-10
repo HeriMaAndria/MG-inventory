@@ -1,15 +1,15 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { useAuth } from './hooks/useAuth'
+import { useAuth } from './hooks/useAuth.js'
 
 // Pages publiques
-import LoginPage from './pages/auth/LoginPage'
-import SignupPage from './pages/auth/SignupPage'
+import LoginPage from './pages/auth/LoginPage.jsx'
+import SignupPage from './pages/auth/SignupPage.jsx'
 
 // Pages utilisateur
-import DashboardPage from './pages/user/DashboardPage'
+import DashboardPage from './pages/user/DashboardPage.jsx'
 
 // Composants
-import { ProtectedRoute, AdminRoute } from './components/ProtectedRoute'
+import { ProtectedRoute, AdminRoute } from './components/ProtectedRoute.jsx'
 
 import './styles/main.css'
 

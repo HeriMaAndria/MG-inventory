@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { useAuth } from '../../hooks/useAuth'
+import { useAuth } from '../../hooks/useAuth.js'
 
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false)

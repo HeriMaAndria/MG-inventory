@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { useAuth } from '../../hooks/useAuth'
-import { InvoiceService } from '../../services/invoiceService'
+import { useAuth } from '../../hooks/useAuth.js'
+import { InvoiceService } from '../../services/invoiceService.js'
 
 export default function InvoicesPage() {
   const { user } = useAuth()

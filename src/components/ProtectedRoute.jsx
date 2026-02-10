@@ -1,7 +1,7 @@
 import { Navigate } from 'react-router-dom'
-import { useAuth } from '../hooks/useAuth'
-import Navbar from './Layout/Navbar'
-import Sidebar from './Layout/Sidebar'
+import { useAuth } from '../hooks/useAuth.js'
+import Navbar from './Layout/Navbar.jsx'
+import Sidebar from './Layout/Sidebar.jsx'
 
 export default function ProtectedRoute({ children }) {
   const { user, loading, profile } = useAuth()

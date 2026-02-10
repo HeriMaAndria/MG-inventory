@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useAuth } from '../../hooks/useAuth'
+import { useAuth } from '../../hooks/useAuth.js'
 
 export default function SettingsPage() {
   const { user, profile } = useAuth()
