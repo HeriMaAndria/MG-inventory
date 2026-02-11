@@ -4,27 +4,16 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { LoadingButton, PageLoader } from '@/app/components/Loading'
 
 /**
- * PAGE DE CONNEXION
+ * PAGE DE CONNEXION - VERSION AMÉLIORÉE
  * 
- * Cette page permet aux utilisateurs de se connecter.
- * 
- * FLUX :
- * 1. User entre email + mot de passe
- * 2. On appelle Supabase pour vérifier
- * 3. Si OK → récupère le rôle depuis la table profiles
- * 4. Redirige vers le dashboard correspondant
- * 
- * CONCEPTS :
- * - 'use client' = ce composant s'exécute côté navigateur
- * - useState = pour gérer l'état du formulaire
- * - useEffect = pour initialiser Supabase uniquement côté client
- * - async/await = pour les appels réseau
- * 
- * CORRECTIF :
- * - Supabase initialisé dans useEffect pour éviter les erreurs de build SSG
- * - Affichage d'un loader pendant l'initialisation
+ * Améliorations :
+ * ✅ Loading states sur le bouton
+ * ✅ Validation des champs
+ * ✅ Messages d'erreur clairs
+ * ✅ Loader pendant l'initialisation
  */
 
 export default function LoginPage() {
@@ -37,66 +26,108 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
+  // Validation en temps réel
+  const [emailError, setEmailError] = useState('')
+  const [passwordError, setPasswordError] = useState('')
+
   /**
    * Initialise le client Supabase uniquement côté client
-   * pour éviter les problèmes de build avec les variables d'environnement
    */
   useEffect(() => {
     setSupabase(createClient())
   }, [])
 
   /**
+   * Validation de l'email
+   */
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!email) {
+      setEmailError('L\'email est requis')
+      return false
+    }
+    if (!emailRegex.test(email)) {
+      setEmailError('Email invalide')
+      return false
+    }
+    setEmailError('')
+    return true
+  }
+
+  /**
+   * Validation du mot de passe
+   */
+  const validatePassword = (password: string) => {
+    if (!password) {
+      setPasswordError('Le mot de passe est requis')
+      return false
+    }
+    if (password.length < 6) {
+      setPasswordError('Le mot de passe doit contenir au moins 6 caractères')
+      return false
+    }
+    setPasswordError('')
+    return true
+  }
+
+  /**
    * Fonction appelée quand le formulaire est soumis
    */
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault() // Empêche le rechargement de la page
+    e.preventDefault()
     
     if (!supabase) {
       setError('Client Supabase non initialisé')
       return
     }
 
-    setError('') // Reset les erreurs
-    setLoading(true) // Affiche le loader
+    // Validation avant soumission
+    const isEmailValid = validateEmail(email)
+    const isPasswordValid = validatePassword(password)
+
+    if (!isEmailValid || !isPasswordValid) {
+      return
+    }
+
+    setError('')
+    setLoading(true) // ✅ Active le loading state
 
     try {
-      // 1. Appel à Supabase pour se connecter
+      // 1. Connexion à Supabase
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
-      if (authError) throw authError
+      if (authError) {
+        // Message d'erreur générique pour la sécurité
+        throw new Error('Email ou mot de passe incorrect')
+      }
 
-      // 2. Récupère le rôle de l'utilisateur
+      // 2. Récupère le rôle
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('role')
         .eq('id', authData.user.id)
         .single()
 
-      if (profileError) throw profileError
+      if (profileError || !profile) {
+        throw new Error('Erreur lors de la récupération du profil')
+      }
 
-      // 3. Redirige vers le dashboard correspondant
+      // 3. Redirige
       router.push(`/${profile.role}`)
 
     } catch (err: any) {
       setError(err.message || 'Erreur de connexion')
     } finally {
-      setLoading(false)
+      setLoading(false) // ✅ Désactive le loading state
     }
   }
 
-  // Affiche un loader pendant l'initialisation de Supabase
+  // ✅ Affiche un loader pendant l'initialisation
   if (!supabase) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Chargement...</p>
-        </div>
-      </div>
-    )
+    return <PageLoader message="Initialisation..." />
   }
 
   return (
@@ -119,11 +150,23 @@ export default function LoginPage() {
               id="email"
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value)
+                if (emailError) validateEmail(e.target.value)
+              }}
+              onBlur={() => validateEmail(email)}
               required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className={`
+                w-full px-4 py-2 border rounded-lg 
+                focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                ${emailError ? 'border-red-500' : 'border-gray-300'}
+              `}
               placeholder="votre@email.com"
             />
+            {/* ✅ Message d'erreur validation */}
+            {emailError && (
+              <p className="mt-1 text-sm text-red-600">{emailError}</p>
+            )}
           </div>
 
           {/* Mot de passe */}
@@ -135,35 +178,50 @@ export default function LoginPage() {
               id="password"
               type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value)
+                if (passwordError) validatePassword(e.target.value)
+              }}
+              onBlur={() => validatePassword(password)}
               required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className={`
+                w-full px-4 py-2 border rounded-lg 
+                focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                ${passwordError ? 'border-red-500' : 'border-gray-300'}
+              `}
               placeholder="••••••••"
             />
+            {/* ✅ Message d'erreur validation */}
+            {passwordError && (
+              <p className="mt-1 text-sm text-red-600">{passwordError}</p>
+            )}
           </div>
 
-          {/* Message d'erreur */}
+          {/* Message d'erreur global */}
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
               {error}
             </div>
           )}
 
-          {/* Bouton */}
-          <button
+          {/* ✅ Bouton avec loading state */}
+          <LoadingButton
             type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+            loading={loading}
+            variant="primary"
+            className="w-full"
           >
-            {loading ? 'Connexion...' : 'Se connecter'}
-          </button>
+            Se connecter
+          </LoadingButton>
         </form>
 
-        {/* Info développement */}
-        <div className="mt-6 text-center text-sm text-gray-500">
-          <p>Comptes de test :</p>
-          <p className="text-xs mt-1">admin@mg.com / gerant@mg.com / revendeur@mg.com</p>
-        </div>
+        {/* Info développement - À RETIRER EN PRODUCTION */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="mt-6 text-center text-sm text-gray-500">
+            <p>Comptes de test :</p>
+            <p className="text-xs mt-1">admin@mg.com / gerant@mg.com / revendeur@mg.com</p>
+          </div>
+        )}
       </div>
     </div>
   )
