@@ -2,17 +2,9 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 /**
- * MIDDLEWARE - GARDIEN DES ROUTES
+ * MIDDLEWARE SIMPLIFIÉ POUR DEBUG
  * 
- * Ce fichier s'exécute AVANT chaque requête.
- * Il vérifie si l'utilisateur est connecté et a les droits d'accès.
- * 
- * FONCTIONNEMENT :
- * 1. Utilisateur demande /admin/dashboard
- * 2. Middleware vérifie la session
- * 3. Si pas connecté → redirige vers /login
- * 4. Si connecté mais pas admin → redirige vers son dashboard
- * 5. Sinon → laisse passer
+ * Version allégée qui log les erreurs et gère les cas limites
  */
 
 export async function middleware(request: NextRequest) {
@@ -22,94 +14,118 @@ export async function middleware(request: NextRequest) {
     },
   })
 
-  // Crée un client Supabase pour le middleware
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value
-        },
-        set(name: string, value: string, options: CookieOptions) {
-          request.cookies.set({
-            name,
-            value,
-            ...options,
-          })
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          })
-          response.cookies.set({
-            name,
-            value,
-            ...options,
-          })
-        },
-        remove(name: string, options: CookieOptions) {
-          request.cookies.set({
-            name,
-            value: '',
-            ...options,
-          })
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          })
-          response.cookies.set({
-            name,
-            value: '',
-            ...options,
-          })
-        },
-      },
+  try {
+    // Vérifie que les variables d'environnement existent
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+    if (!supabaseUrl || !supabaseKey) {
+      console.error('❌ Variables Supabase manquantes')
+      // Laisse passer sans bloquer
+      return response
     }
-  )
 
-  // Récupère la session actuelle
-  const { data: { user } } = await supabase.auth.getUser()
+    // Crée le client Supabase
+    const supabase = createServerClient(
+      supabaseUrl,
+      supabaseKey,
+      {
+        cookies: {
+          get(name: string) {
+            return request.cookies.get(name)?.value
+          },
+          set(name: string, value: string, options: CookieOptions) {
+            request.cookies.set({
+              name,
+              value,
+              ...options,
+            })
+            response = NextResponse.next({
+              request: {
+                headers: request.headers,
+              },
+            })
+            response.cookies.set({
+              name,
+              value,
+              ...options,
+            })
+          },
+          remove(name: string, options: CookieOptions) {
+            request.cookies.set({
+              name,
+              value: '',
+              ...options,
+            })
+            response = NextResponse.next({
+              request: {
+                headers: request.headers,
+              },
+            })
+            response.cookies.set({
+              name,
+              value: '',
+              ...options,
+            })
+          },
+        },
+      }
+    )
 
-  // Route demandée
-  const { pathname } = request.nextUrl
+    // Récupère l'utilisateur actuel
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
 
-  // Si pas connecté et essaie d'accéder à une route protégée
-  if (!user && (
-    pathname.startsWith('/admin') || 
-    pathname.startsWith('/gerant') ||
-    pathname.startsWith('/revendeur')
-  )) {
-    return NextResponse.redirect(new URL('/login', request.url))
-  }
-
-  // Si connecté et sur la page login, redirige vers son dashboard
-  if (user && pathname === '/login') {
-    // Récupère le rôle depuis la table profiles
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (profile) {
-      return NextResponse.redirect(new URL(`/${profile.role}`, request.url))
+    if (authError) {
+      console.error('❌ Erreur auth:', authError.message)
     }
-  }
 
-  return response
+    const { pathname } = request.nextUrl
+
+    // Protection des routes - version simplifiée
+    const protectedRoutes = ['/admin', '/gerant', '/revendeur']
+    const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route))
+
+    // Si pas connecté et route protégée → redirige vers login
+    if (!user && isProtectedRoute) {
+      return NextResponse.redirect(new URL('/login', request.url))
+    }
+
+    // Si connecté et sur /login → redirige vers dashboard
+    if (user && pathname === '/login') {
+      // Essaie de récupérer le rôle, mais ne crash pas si ça échoue
+      try {
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single()
+
+        if (profileError) {
+          console.error('⚠️ Erreur récupération profil:', profileError.message)
+          // Redirige vers admin par défaut si erreur
+          return NextResponse.redirect(new URL('/admin', request.url))
+        }
+
+        if (profile && profile.role) {
+          return NextResponse.redirect(new URL(`/${profile.role}`, request.url))
+        }
+      } catch (err) {
+        console.error('⚠️ Erreur dans récupération profile:', err)
+        // Continue sans bloquer
+      }
+    }
+
+    return response
+
+  } catch (error) {
+    // En cas d'erreur, log et laisse passer
+    console.error('❌ Erreur middleware:', error)
+    return response
+  }
 }
 
-// Configure quelles routes le middleware doit vérifier
 export const config = {
   matcher: [
-    /*
-     * Vérifie toutes les routes sauf :
-     * - _next/static (fichiers statiques)
-     * - _next/image (optimisation d'images)
-     * - favicon.ico
-     */
     '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
 }
