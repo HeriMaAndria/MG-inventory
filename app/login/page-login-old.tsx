@@ -1,6 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+/**
+ * PAGE DE CONNEXION - DESIGN SOMBRE
+ */
+
+import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Button from '@/components/ui/Button'
@@ -10,16 +14,10 @@ import Link from 'next/link'
 
 export default function LoginPage() {
   const router = useRouter()
-  const [supabase, setSupabase] = useState<any>(null)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-
-  // Initialise Supabase côté client uniquement
-  useEffect(() => {
-    setSupabase(createClient())
-  }, [])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -27,70 +25,25 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      if (!supabase) {
-        throw new Error('Client Supabase non initialisé')
-      }
-
-      // 1. Connexion
+      const supabase = createClient()
+      
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
-      if (authError) {
-        console.error('Erreur auth:', authError)
-        throw new Error('Email ou mot de passe incorrect')
-      }
+      if (authError) throw authError
 
-      if (!authData.user) {
-        throw new Error('Aucun utilisateur retourné')
-      }
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', authData.user.id)
+        .single()
 
-      // 2. Récupère le rôle (avec retry en cas d'erreur)
-      let profile = null
-      let retries = 3
+      if (profileError) throw profileError
 
-      while (retries > 0 && !profile) {
-        try {
-          const { data, error: profileError } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', authData.user.id)
-            .single()
-
-          if (profileError) {
-            console.error('Erreur profile:', profileError)
-            retries--
-            if (retries > 0) {
-              await new Promise(resolve => setTimeout(resolve, 500))
-              continue
-            }
-            // Si échec après 3 tentatives, redirige vers admin par défaut
-            router.push('/admin')
-            return
-          }
-
-          profile = data
-        } catch (err) {
-          console.error('Erreur récupération profil:', err)
-          retries--
-          if (retries === 0) {
-            router.push('/admin')
-            return
-          }
-          await new Promise(resolve => setTimeout(resolve, 500))
-        }
-      }
-
-      // 3. Redirige vers le dashboard approprié
-      if (profile && profile.role) {
-        router.push(`/${profile.role}`)
-      } else {
-        router.push('/admin')
-      }
-
+      router.push(`/${profile.role}`)
     } catch (err: any) {
-      console.error('Erreur login:', err)
       setError(err.message || 'Erreur de connexion')
     } finally {
       setLoading(false)
@@ -99,9 +52,11 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative">
+      {/* Background effect */}
       <div className="absolute inset-0 bg-gradient-dark"></div>
       
       <div className="relative z-10 w-full max-w-md animate-slide-up">
+        {/* Logo / Titre */}
         <div className="text-center mb-8">
           <div className="inline-block p-4 bg-accent-yellow/10 rounded-2xl border border-accent-yellow/20 mb-4 glow-yellow">
             <span className="text-5xl">🧱</span>
@@ -114,6 +69,7 @@ export default function LoginPage() {
           </p>
         </div>
 
+        {/* Carte de connexion */}
         <Card glow>
           <CardHeader>
             <CardTitle>Connexion</CardTitle>
@@ -124,6 +80,7 @@ export default function LoginPage() {
 
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-4">
+              {/* Email */}
               <Input
                 type="email"
                 label="Email"
@@ -138,6 +95,7 @@ export default function LoginPage() {
                 }
               />
 
+              {/* Mot de passe */}
               <Input
                 type="password"
                 label="Mot de passe"
@@ -152,6 +110,7 @@ export default function LoginPage() {
                 }
               />
 
+              {/* Mot de passe oublié */}
               <div className="text-right">
                 <Link 
                   href="/forgot-password" 
@@ -161,19 +120,20 @@ export default function LoginPage() {
                 </Link>
               </div>
 
+              {/* Message d'erreur */}
               {error && (
                 <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg text-sm">
                   {error}
                 </div>
               )}
 
+              {/* Bouton de connexion */}
               <Button 
                 type="submit" 
                 variant="primary" 
                 size="lg" 
                 isLoading={loading}
                 className="w-full"
-                disabled={!supabase}
               >
                 Se connecter
               </Button>
@@ -193,6 +153,7 @@ export default function LoginPage() {
           </CardFooter>
         </Card>
 
+        {/* Comptes de test (à retirer en production) */}
         <div className="mt-6 glass-container p-4">
           <p className="text-xs text-text-secondary text-center mb-2">Comptes de test :</p>
           <div className="flex flex-wrap gap-2 justify-center text-xs">
