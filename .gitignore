@@ -1,37 +1,36 @@
-# Dépendances
-node_modules/
+# dependencies
+node_modules
 .pnp
 .pnp.js
 
-# Tests
-coverage/
+# testing
+coverage
 
-# Next.js
+# next.js
 .next/
 out/
-build/
+build
 dist/
 
-# Fichiers de debug
+# misc
+.DS_Store
+*.pem
+
+# debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Variables d'environnement (IMPORTANT)
+# local env files
+.env*.local
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
 
-# Vercel
+# vercel
 .vercel
 
-# TypeScript
+# typescript
 *.tsbuildinfo
 next-env.d.ts
 
-# Système
-.DS_Store
-*.pem
-Thumbs.db
+# turbo
+.turbo
