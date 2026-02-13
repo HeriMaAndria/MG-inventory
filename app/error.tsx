@@ -1,11 +1,11 @@
 'use client'
 
 /**
- * PAGE D'ERREUR GLOBALE - DARK MODE VERT
+ * PAGE D'ERREUR GLOBALE - DARK MODE JAUNE
  * 
  * Version personnalisée avec :
- * - Thème sombre (dark mode)
- * - Couleur principale : Vert
+ * - Thème sombre (#0a0a0a)
+ * - Couleur principale : Jaune (#fbbf24)
  * - Animations fluides
  * - Messages personnalisés
  */
@@ -24,19 +24,19 @@ export default function Error({
   }, [error])
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0a0a0a] via-[#1a1a1a] to-[#0a0a0a] px-4">
       <div className="max-w-md w-full">
         {/* Carte principale avec effet de glow */}
-        <div className="bg-gray-800 rounded-2xl shadow-2xl border border-gray-700 p-8 relative overflow-hidden">
-          {/* Effet de glow vert en arrière-plan */}
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 bg-green-500/10 rounded-full blur-3xl"></div>
+        <div className="bg-[#1a1a1a] rounded-2xl shadow-2xl border border-gray-800 p-8 relative overflow-hidden">
+          {/* Effet de glow jaune en arrière-plan */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 bg-[#fbbf24]/10 rounded-full blur-3xl"></div>
           
           <div className="relative z-10">
             {/* Logo animé avec effet pulsant */}
             <div className="text-center mb-6">
-              <div className="mx-auto flex items-center justify-center h-20 w-20 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 mb-4 animate-pulse shadow-lg shadow-green-500/50">
+              <div className="mx-auto flex items-center justify-center h-20 w-20 rounded-full bg-gradient-to-br from-[#fbbf24] to-[#f59e0b] mb-4 animate-pulse shadow-lg shadow-[#fbbf24]/50">
                 <svg
-                  className="h-12 w-12 text-white"
+                  className="h-12 w-12 text-[#0a0a0a]"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -50,8 +50,8 @@ export default function Error({
                 </svg>
               </div>
               
-              {/* Titre avec dégradé vert */}
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent mb-3">
+              {/* Titre avec dégradé jaune */}
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-[#fbbf24] to-[#f59e0b] bg-clip-text text-transparent mb-3">
                 Une erreur s'est produite
               </h1>
               <p className="text-gray-400 text-lg">
@@ -61,15 +61,15 @@ export default function Error({
 
             {/* Message d'erreur technique (dev uniquement) */}
             {process.env.NODE_ENV === 'development' && (
-              <div className="mb-6 p-4 bg-gray-900 border border-green-500/30 rounded-lg">
+              <div className="mb-6 p-4 bg-[#0a0a0a] border border-[#fbbf24]/30 rounded-lg">
                 <div className="flex items-start space-x-2">
                   <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                    <svg className="h-5 w-5 text-[#fbbf24]" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                     </svg>
                   </div>
                   <div className="flex-1">
-                    <p className="text-xs font-mono text-green-400 break-words">
+                    <p className="text-xs font-mono text-[#fbbf24] break-words">
                       {error.message}
                     </p>
                     {error.digest && (
@@ -87,7 +87,7 @@ export default function Error({
               {/* Bouton réessayer */}
               <button
                 onClick={reset}
-                className="w-full group relative bg-gradient-to-r from-green-600 to-emerald-600 text-white py-3.5 px-4 rounded-xl font-semibold hover:from-green-500 hover:to-emerald-500 transition-all duration-300 transform hover:scale-[1.02] shadow-lg shadow-green-500/30 hover:shadow-green-500/50"
+                className="w-full group relative bg-gradient-to-r from-[#fbbf24] to-[#f59e0b] text-[#0a0a0a] py-3.5 px-4 rounded-xl font-semibold hover:from-[#fcd34d] hover:to-[#fbbf24] transition-all duration-300 transform hover:scale-[1.02] shadow-lg shadow-[#fbbf24]/30 hover:shadow-[#fbbf24]/50"
               >
                 <div className="flex items-center justify-center">
                   <svg
@@ -110,7 +110,7 @@ export default function Error({
               {/* Bouton retour à l'accueil */}
               <a
                 href="/"
-                className="block w-full group bg-gray-700 text-gray-200 py-3.5 px-4 rounded-xl font-semibold hover:bg-gray-600 transition-all duration-300 transform hover:scale-[1.02] border border-gray-600 hover:border-green-500/50"
+                className="block w-full group bg-gray-800 text-gray-200 py-3.5 px-4 rounded-xl font-semibold hover:bg-gray-700 transition-all duration-300 transform hover:scale-[1.02] border border-gray-700 hover:border-[#fbbf24]/50"
               >
                 <div className="flex items-center justify-center">
                   <svg
@@ -145,9 +145,9 @@ export default function Error({
 
         {/* Particules animées en arrière-plan */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-1/4 left-1/4 w-2 h-2 bg-green-500 rounded-full animate-ping"></div>
-          <div className="absolute top-3/4 right-1/4 w-2 h-2 bg-emerald-500 rounded-full animate-ping" style={{ animationDelay: '1s' }}></div>
-          <div className="absolute bottom-1/4 left-3/4 w-2 h-2 bg-green-400 rounded-full animate-ping" style={{ animationDelay: '2s' }}></div>
+          <div className="absolute top-1/4 left-1/4 w-2 h-2 bg-[#fbbf24] rounded-full animate-ping"></div>
+          <div className="absolute top-3/4 right-1/4 w-2 h-2 bg-[#f59e0b] rounded-full animate-ping" style={{ animationDelay: '1s' }}></div>
+          <div className="absolute bottom-1/4 left-3/4 w-2 h-2 bg-[#fcd34d] rounded-full animate-ping" style={{ animationDelay: '2s' }}></div>
         </div>
       </div>
     </div>
