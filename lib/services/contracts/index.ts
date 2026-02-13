@@ -26,7 +26,7 @@ import type {
   DashboardStats,
   RevendeurStats,
   ApiResponse,
-} from '../types/models'
+} from '@/lib/types/models'
 
 // ============================================
 // PRODUCT SERVICE
