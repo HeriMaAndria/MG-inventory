@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Button from '@/components/ui/Button'
@@ -10,16 +10,10 @@ import Link from 'next/link'
 
 export default function LoginPage() {
   const router = useRouter()
-  const [supabase, setSupabase] = useState<any>(null)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-
-  // Initialise Supabase côté client uniquement
-  useEffect(() => {
-    setSupabase(createClient())
-  }, [])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -27,70 +21,23 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      if (!supabase) {
-        throw new Error('Client Supabase non initialisé')
-      }
-
-      // 1. Connexion
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      const supabase = createClient()
+      
+      // Connexion
+      const { error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
       if (authError) {
-        console.error('Erreur auth:', authError)
         throw new Error('Email ou mot de passe incorrect')
       }
 
-      if (!authData.user) {
-        throw new Error('Aucun utilisateur retourné')
-      }
-
-      // 2. Récupère le rôle (avec retry en cas d'erreur)
-      let profile = null
-      let retries = 3
-
-      while (retries > 0 && !profile) {
-        try {
-          const { data, error: profileError } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', authData.user.id)
-            .single()
-
-          if (profileError) {
-            console.error('Erreur profile:', profileError)
-            retries--
-            if (retries > 0) {
-              await new Promise(resolve => setTimeout(resolve, 500))
-              continue
-            }
-            // Si échec après 3 tentatives, redirige vers admin par défaut
-            router.push('/admin')
-            return
-          }
-
-          profile = data
-        } catch (err) {
-          console.error('Erreur récupération profil:', err)
-          retries--
-          if (retries === 0) {
-            router.push('/admin')
-            return
-          }
-          await new Promise(resolve => setTimeout(resolve, 500))
-        }
-      }
-
-      // 3. Redirige vers le dashboard approprié
-      if (profile && profile.role) {
-        router.push(`/${profile.role}`)
-      } else {
-        router.push('/admin')
-      }
+      // Redirection simple vers /admin
+      // La page admin vérifiera le rôle et redirigera si besoin
+      window.location.href = '/admin'
 
     } catch (err: any) {
-      console.error('Erreur login:', err)
       setError(err.message || 'Erreur de connexion')
     } finally {
       setLoading(false)
@@ -173,7 +120,6 @@ export default function LoginPage() {
                 size="lg" 
                 isLoading={loading}
                 className="w-full"
-                disabled={!supabase}
               >
                 Se connecter
               </Button>
