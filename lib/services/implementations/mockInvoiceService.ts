@@ -10,6 +10,7 @@ import type {
   UpdateInvoiceInput,
   InvoiceFilters,
   ApiResponse,
+  InvoiceItem,
 } from '@/lib/types/models'
 
 const MOCK_INVOICES: Invoice[] = [
@@ -145,22 +146,28 @@ export const mockInvoiceService: IInvoiceService = {
     try {
       const invoices = loadInvoices()
       
+      // Calculer le subtotal
       const subtotal = data.items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0)
       const marge_amount = (subtotal * data.marge_percentage) / 100
       const total = subtotal + marge_amount
+      
+      // Créer les items complets avec product_name et total
+      const completeItems: InvoiceItem[] = data.items.map(item => ({
+        product_id: item.product_id,
+        product_name: `Produit ${item.product_id}`, // À remplacer par le vrai nom en production
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        total: item.quantity * item.unit_price,
+      }))
       
       const newInvoice: Invoice = {
         id: Date.now().toString(),
         reference: `DEV-${String(invoices.length + 1).padStart(3, '0')}`,
         revendeur_id: data.revendeur_id,
-        revendeur_name: 'Revendeur Test',
+        revendeur_name: 'Revendeur Test', // À remplacer par le vrai nom
         client_id: data.client_id || null,
         client_name: data.client_name || null,
-        items: data.items.map(item => ({
-          ...item,
-          product_name: `Produit ${item.product_id}`,
-          total: item.quantity * item.unit_price,
-        })),
+        items: completeItems,
         subtotal,
         marge_percentage: data.marge_percentage,
         marge_amount,
@@ -190,19 +197,55 @@ export const mockInvoiceService: IInvoiceService = {
         return { data: null, error: 'Facture non trouvée' }
       }
       
+      // Copier l'invoice existante
       const updated: Invoice = {
         ...invoices[index],
-        ...data,
         updated_at: new Date().toISOString(),
       }
       
-      if (data.items) {
-        const subtotal = data.items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0)
-        const marge_percentage = data.marge_percentage || invoices[index].marge_percentage
+      // Mettre à jour les champs simples
+      if (data.status !== undefined) {
+        updated.status = data.status
+      }
+      if (data.notes !== undefined) {
+        updated.notes = data.notes || null
+      }
+      if (data.client_id !== undefined) {
+        updated.client_id = data.client_id || null
+      }
+      if (data.client_name !== undefined) {
+        updated.client_name = data.client_name || null
+      }
+      
+      // Si les items ou la marge changent, recalculer tout
+      if (data.items || data.marge_percentage !== undefined) {
+        // Utiliser les nouveaux items ou garder les anciens
+        const itemsToUse = data.items ? data.items : updated.items.map(item => ({
+          product_id: item.product_id,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+        }))
+        
+        // Créer les items complets
+        const completeItems: InvoiceItem[] = itemsToUse.map(item => ({
+          product_id: item.product_id,
+          product_name: `Produit ${item.product_id}`, // À remplacer
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          total: item.quantity * item.unit_price,
+        }))
+        
+        // Recalculer les totaux
+        const subtotal = completeItems.reduce((sum, item) => sum + item.total, 0)
+        const marge_percentage = data.marge_percentage !== undefined ? data.marge_percentage : updated.marge_percentage
         const marge_amount = (subtotal * marge_percentage) / 100
+        const total = subtotal + marge_amount
+        
+        updated.items = completeItems
         updated.subtotal = subtotal
+        updated.marge_percentage = marge_percentage
         updated.marge_amount = marge_amount
-        updated.total = subtotal + marge_amount
+        updated.total = total
       }
       
       invoices[index] = updated

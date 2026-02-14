@@ -10,6 +10,7 @@ import type {
   UpdateOrderInput,
   OrderFilters,
   ApiResponse,
+  InvoiceItem,
 } from '@/lib/types/models'
 
 const MOCK_ORDERS: Order[] = [
@@ -168,18 +169,23 @@ export const mockOrderService: IOrderService = {
     try {
       const orders = loadOrders()
       
-      const total = data.items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0)
+      // Créer les items complets
+      const completeItems: InvoiceItem[] = data.items.map(item => ({
+        product_id: item.product_id,
+        product_name: `Produit ${item.product_id}`, // À remplacer
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        total: item.quantity * item.unit_price,
+      }))
+      
+      const total = completeItems.reduce((sum, item) => sum + item.total, 0)
       
       const newOrder: Order = {
         id: Date.now().toString(),
         reference: `CMD-${String(orders.length + 1).padStart(3, '0')}`,
         revendeur_id: data.revendeur_id,
         revendeur_name: 'Revendeur Test',
-        items: data.items.map(item => ({
-          ...item,
-          product_name: `Produit ${item.product_id}`,
-          total: item.quantity * item.unit_price,
-        })),
+        items: completeItems,
         total,
         status: 'en_attente',
         notes: data.notes || null,
@@ -209,13 +215,29 @@ export const mockOrderService: IOrderService = {
       
       const updated: Order = {
         ...orders[index],
-        ...data,
         updated_at: new Date().toISOString(),
       }
       
+      // Mettre à jour les champs simples
+      if (data.status !== undefined) {
+        updated.status = data.status
+      }
+      if (data.notes !== undefined) {
+        updated.notes = data.notes || null
+      }
+      
+      // Si les items changent, recalculer
       if (data.items) {
-        const total = data.items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0)
-        updated.total = total
+        const completeItems: InvoiceItem[] = data.items.map(item => ({
+          product_id: item.product_id,
+          product_name: `Produit ${item.product_id}`,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          total: item.quantity * item.unit_price,
+        }))
+        
+        updated.items = completeItems
+        updated.total = completeItems.reduce((sum, item) => sum + item.total, 0)
       }
       
       orders[index] = updated
