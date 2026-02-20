@@ -109,13 +109,13 @@ export default function AdminDashboard() {
                   </div>
                 </Link>
 
-                <Link href="/gerant/stock">
+                <Link href="/admin/reports">
                   <div className="elevated-container p-6 hover:glow-yellow cursor-pointer transition-all group">
                     <div className="flex items-center gap-4">
-                      <div className="text-4xl group-hover:scale-110 transition-transform">📦</div>
+                      <div className="text-4xl group-hover:scale-110 transition-transform">📈</div>
                       <div>
-                        <p className="font-semibold text-text-primary">Vue Stock Global</p>
-                        <p className="text-sm text-text-secondary">Consulter tout le stock</p>
+                        <p className="font-semibold text-text-primary">Rapports</p>
+                        <p className="text-sm text-text-secondary">Analyses détaillées</p>
                       </div>
                     </div>
                   </div>

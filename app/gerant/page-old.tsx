@@ -104,12 +104,12 @@ export default function GerantDashboard() {
                   </div>
                 </Link>
 
-                <Link href="/revendeur/commandes">
+                <Link href="/gerant/revendeurs">
                   <div className="elevated-container p-6 hover:glow-yellow cursor-pointer transition-all group">
                     <div className="text-center space-y-2">
-                      <div className="text-4xl group-hover:scale-110 transition-transform">🛒</div>
-                      <p className="font-semibold text-text-primary">Commandes Revendeurs</p>
-                      <p className="text-sm text-text-secondary">Suivre les commandes</p>
+                      <div className="text-4xl group-hover:scale-110 transition-transform">🧑‍💻</div>
+                      <p className="font-semibold text-text-primary">Revendeurs</p>
+                      <p className="text-sm text-text-secondary">Gérer partenaires</p>
                     </div>
                   </div>
                 </Link>
