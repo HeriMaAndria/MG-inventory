@@ -61,85 +61,73 @@ export default function HomePage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Feature 1 */}
-            <Link href="/gerant/stock">
-              <Card hover>
-                <CardContent className="p-8 text-center space-y-4 cursor-pointer">
-                  <div className="text-6xl">📦</div>
-                  <h3 className="text-xl font-bold text-text-primary">Gestion du Stock</h3>
-                  <p className="text-text-secondary">
-                    Suivez vos produits, quantités et prix en temps réel. 
-                    Alertes stock bas et historique complet.
-                  </p>
-                </CardContent>
-              </Card>
-            </Link>
+            <Card hover>
+              <CardContent className="p-8 text-center space-y-4">
+                <div className="text-6xl">📦</div>
+                <h3 className="text-xl font-bold text-text-primary">Gestion du Stock</h3>
+                <p className="text-text-secondary">
+                  Suivez vos produits, quantités et prix en temps réel. 
+                  Alertes stock bas et historique complet.
+                </p>
+              </CardContent>
+            </Card>
 
             {/* Feature 2 */}
-            <Link href="/admin/users">
-              <Card hover>
-                <CardContent className="p-8 text-center space-y-4 cursor-pointer">
-                  <div className="text-6xl">👥</div>
-                  <h3 className="text-xl font-bold text-text-primary">Clients & Revendeurs</h3>
-                  <p className="text-text-secondary">
-                    Gérez vos clients et revendeurs avec leurs marges personnalisées. 
-                    Suivi des commandes et paiements.
-                  </p>
-                </CardContent>
-              </Card>
-            </Link>
+            <Card hover>
+              <CardContent className="p-8 text-center space-y-4">
+                <div className="text-6xl">👥</div>
+                <h3 className="text-xl font-bold text-text-primary">Clients & Revendeurs</h3>
+                <p className="text-text-secondary">
+                  Gérez vos clients et revendeurs avec leurs marges personnalisées. 
+                  Suivi des commandes et paiements.
+                </p>
+              </CardContent>
+            </Card>
 
             {/* Feature 3 */}
-            <Link href="/gerant/factures">
-              <Card hover>
-                <CardContent className="p-8 text-center space-y-4 cursor-pointer">
-                  <div className="text-6xl">🧾</div>
-                  <h3 className="text-xl font-bold text-text-primary">Facturation</h3>
-                  <p className="text-text-secondary">
-                    Créez, suivez et validez vos factures. 
-                    Génération PDF et suivi des paiements.
-                  </p>
-                </CardContent>
-              </Card>
-            </Link>
+            <Card hover>
+              <CardContent className="p-8 text-center space-y-4">
+                <div className="text-6xl">🧾</div>
+                <h3 className="text-xl font-bold text-text-primary">Facturation</h3>
+                <p className="text-text-secondary">
+                  Créez, suivez et validez vos factures. 
+                  Génération PDF et suivi des paiements.
+                </p>
+              </CardContent>
+            </Card>
 
             {/* Feature 4 */}
-            <Link href="/admin">
-              <Card hover>
-                <CardContent className="p-8 text-center space-y-4 cursor-pointer">
-                  <div className="text-6xl">📊</div>
-                  <h3 className="text-xl font-bold text-text-primary">Statistiques</h3>
-                  <p className="text-text-secondary">
-                    Tableaux de bord détaillés avec ventes, bénéfices et performances.
-                  </p>
-                </CardContent>
-              </Card>
-            </Link>
+            <Card hover>
+              <CardContent className="p-8 text-center space-y-4">
+                <div className="text-6xl">📊</div>
+                <h3 className="text-xl font-bold text-text-primary">Statistiques</h3>
+                <p className="text-text-secondary">
+                  Tableaux de bord détaillés avec ventes, bénéfices et performances.
+                </p>
+              </CardContent>
+            </Card>
 
             {/* Feature 5 */}
-            <Link href="/admin/users">
-              <Card hover>
-                <CardContent className="p-8 text-center space-y-4 cursor-pointer">
-                  <div className="text-6xl">🔐</div>
-                  <h3 className="text-xl font-bold text-text-primary">Gestion des Rôles</h3>
-                  <p className="text-text-secondary">
-                    Admins, gérants et revendeurs avec permissions adaptées à chaque niveau.
-                  </p>
-                </CardContent>
-              </Card>
-            </Link>
+            <Card hover>
+              <CardContent className="p-8 text-center space-y-4">
+                <div className="text-6xl">🔐</div>
+                <h3 className="text-xl font-bold text-text-primary">Gestion des Rôles</h3>
+                <p className="text-text-secondary">
+                  Admins, gérants et revendeurs avec permissions adaptées à chaque niveau.
+                </p>
+              </CardContent>
+            </Card>
 
             {/* Feature 6 */}
-            <Link href="/gerant/stock">
-              <Card hover>
-                <CardContent className="p-8 text-center space-y-4 cursor-pointer">
-                  <div className="text-6xl">🔍</div>
-                  <h3 className="text-xl font-bold text-text-primary">Recherche & Filtres</h3>
-                  <p className="text-text-secondary">
-                    Recherche avancée, filtres multiples et exports pour analyses approfondies.
-                  </p>
-                </CardContent>
-              </Card>
-            </Link>
+            <Card hover>
+              <CardContent className="p-8 text-center space-y-4">
+                <div className="text-6xl">🔍</div>
+                <h3 className="text-xl font-bold text-text-primary">Recherche & Filtres</h3>
+                <p className="text-text-secondary">
+                  Recherche avancée, filtres multiples et exports pour analyses approfondies.
+                </p>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>
