@@ -1,178 +1,121 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
-import { logout, getCurrentUser } from '@/lib/auth/mockAuth'
-import ProtectedPage from '@/components/ProtectedPage'
-import StatCard from '@/components/dashboard/StatCard'
-import Card, { CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
 import Link from 'next/link'
+import Card from '@/components/ui/Card'
+import ProtectedPage from '@/components/ProtectedPage'
 
 export default function AdminDashboard() {
-  const router = useRouter()
-  const user = getCurrentUser()
+  const stats = {
+    users: 12,
+    orders: 145,
+    revenue: 8450000,
+    products: 234,
+  }
 
-  const handleLogout = () => {
-    logout()
-    router.push('/login')
+  const quickActions = [
+    { icon: '👥', label: 'Gérer utilisateurs', href: '/admin/users', color: 'bg-blue-500' },
+    { icon: '⚙️', label: 'Paramètres', href: '/admin/settings', color: 'bg-purple-500' },
+    { icon: '📊', label: 'Rapports', href: '#', color: 'bg-green-500' },
+    { icon: '🔔', label: 'Notifications', href: '#', color: 'bg-yellow-500' },
+  ]
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('fr-FR').format(price) + ' Ar'
   }
 
   return (
     <ProtectedPage allowedRoles={['admin']}>
-      <div className="min-h-screen bg-dark-bg">
-        {/* Header */}
-        <header className="glass-container mx-4 mt-4">
-          <div className="max-w-7xl mx-auto px-6 py-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-accent-yellow/10 rounded-xl border border-accent-yellow/20">
-                <span className="text-3xl">👑</span>
-              </div>
+      <div className="p-8 space-y-8">
+        <div>
+          <h1 className="text-3xl font-bold text-text-primary">Dashboard Admin</h1>
+          <p className="text-text-secondary mt-1">Vue d'ensemble du système</p>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <Card className="p-6">
+            <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-2xl md:text-3xl font-bold text-text-primary">
-                  Dashboard Administrateur
-                </h1>
-                <p className="text-sm text-text-secondary mt-1">
-                  Bienvenue, {user?.name}
-                </p>
+                <p className="text-sm text-text-secondary">Utilisateurs</p>
+                <p className="text-3xl font-bold text-text-primary">{stats.users}</p>
               </div>
+              <div className="text-4xl">👥</div>
             </div>
-            
-            <button
-              onClick={handleLogout}
-              className="btn-secondary"
-            >
-              Déconnexion
-            </button>
+          </Card>
+
+          <Card className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-text-secondary">Commandes</p>
+                <p className="text-3xl font-bold text-text-primary">{stats.orders}</p>
+              </div>
+              <div className="text-4xl">🛒</div>
+            </div>
+          </Card>
+
+          <Card className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-text-secondary">CA Total</p>
+                <p className="text-xl font-bold text-accent-yellow">{formatPrice(stats.revenue)}</p>
+              </div>
+              <div className="text-4xl">💰</div>
+            </div>
+          </Card>
+
+          <Card className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-text-secondary">Produits</p>
+                <p className="text-3xl font-bold text-text-primary">{stats.products}</p>
+              </div>
+              <div className="text-4xl">📦</div>
+            </div>
+          </Card>
+        </div>
+
+        {/* Quick Actions */}
+        <div>
+          <h2 className="text-xl font-bold text-text-primary mb-4">Actions rapides</h2>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {quickActions.map((action, i) => (
+              <Link
+                key={i}
+                href={action.href}
+                className="block"
+              >
+                <Card className="p-6 hover:scale-105 transition-transform cursor-pointer">
+                  <div className="flex items-center gap-4">
+                    <div className={`w-12 h-12 ${action.color} bg-opacity-20 rounded-lg flex items-center justify-center text-2xl`}>
+                      {action.icon}
+                    </div>
+                    <span className="font-semibold text-text-primary">{action.label}</span>
+                  </div>
+                </Card>
+              </Link>
+            ))}
           </div>
-        </header>
+        </div>
 
-        <main className="max-w-7xl mx-auto px-4 py-8 space-y-8">
-          {/* Statistiques principales */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <StatCard
-              title="Utilisateurs actifs"
-              value="24"
-              icon="👥"
-              trend={{ value: "+12% ce mois", positive: true }}
-            />
-            
-            <StatCard
-              title="Chiffre d'affaires"
-              value="2.4M Ar"
-              icon="💰"
-              trend={{ value: "+23% ce mois", positive: true }}
-              subtitle="vs mois dernier"
-            />
-            
-            <StatCard
-              title="Commandes"
-              value="156"
-              icon="📦"
-              trend={{ value: "-5% ce mois", positive: false }}
-            />
-            
-            <StatCard
-              title="Stock total"
-              value="1,234"
-              icon="📊"
-              subtitle="produits en stock"
-            />
+        {/* Recent Activity */}
+        <Card className="p-6">
+          <h2 className="text-xl font-bold text-text-primary mb-4">Activité récente</h2>
+          <div className="space-y-3">
+            {[
+              { user: 'Jean Dupont', action: 'a créé un compte revendeur', time: 'Il y a 5 min' },
+              { user: 'Marie Martin', action: 'a validé une commande', time: 'Il y a 12 min' },
+              { user: 'Pierre Durand', action: 'a modifié les paramètres', time: 'Il y a 1h' },
+            ].map((item, i) => (
+              <div key={i} className="flex items-center justify-between py-2 border-b border-dark-border last:border-0">
+                <div>
+                  <span className="text-text-primary font-medium">{item.user}</span>
+                  <span className="text-text-secondary"> {item.action}</span>
+                </div>
+                <span className="text-text-muted text-sm">{item.time}</span>
+              </div>
+            ))}
           </div>
-
-          {/* Quick Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Actions rapides</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Link href="/admin/users">
-                  <div className="elevated-container p-6 hover:glow-yellow cursor-pointer transition-all group">
-                    <div className="flex items-center gap-4">
-                      <div className="text-4xl group-hover:scale-110 transition-transform">👤</div>
-                      <div>
-                        <p className="font-semibold text-text-primary">Gérer les utilisateurs</p>
-                        <p className="text-sm text-text-secondary">Ajouter, modifier, supprimer</p>
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-
-                <Link href="/admin/settings">
-                  <div className="elevated-container p-6 hover:glow-yellow cursor-pointer transition-all group">
-                    <div className="flex items-center gap-4">
-                      <div className="text-4xl group-hover:scale-110 transition-transform">⚙️</div>
-                      <div>
-                        <p className="font-semibold text-text-primary">Paramètres</p>
-                        <p className="text-sm text-text-secondary">Configuration système</p>
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-
-                <Link href="/gerant/stock">
-                  <div className="elevated-container p-6 hover:glow-yellow cursor-pointer transition-all group">
-                    <div className="flex items-center gap-4">
-                      <div className="text-4xl group-hover:scale-110 transition-transform">📦</div>
-                      <div>
-                        <p className="font-semibold text-text-primary">Vue Stock Global</p>
-                        <p className="text-sm text-text-secondary">Consulter tout le stock</p>
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Activité récente */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Activité récente</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {[
-                  { user: 'Gérant Test', action: 'a ajouté 15 produits au stock', time: 'Il y a 5 min', icon: '📦' },
-                  { user: 'Revendeur Test', action: 'a créé une nouvelle facture', time: 'Il y a 12 min', icon: '🧾' },
-                  { user: 'Admin Test', action: 'a modifié les paramètres', time: 'Il y a 1h', icon: '⚙️' },
-                  { user: 'Gérant Test', action: 'a validé 3 commandes', time: 'Il y a 2h', icon: '✅' },
-                ].map((activity, i) => (
-                  <div key={i} className="flex items-start gap-4 p-4 rounded-lg hover:bg-dark-elevated transition-colors">
-                    <div className="text-2xl">{activity.icon}</div>
-                    <div className="flex-1">
-                      <p className="text-text-primary">
-                        <span className="font-semibold">{activity.user}</span> {activity.action}
-                      </p>
-                      <p className="text-sm text-text-muted mt-1">{activity.time}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Graphique simulé */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Ventes des 7 derniers jours</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-64 flex items-end justify-between gap-2">
-                {[65, 78, 45, 89, 92, 73, 85].map((height, i) => (
-                  <div key={i} className="flex-1 flex flex-col items-center gap-2">
-                    <div 
-                      className="w-full bg-accent-yellow/20 border border-accent-yellow/40 rounded-t hover:bg-accent-yellow/40 transition-all cursor-pointer"
-                      style={{ height: `${height}%` }}
-                    ></div>
-                    <span className="text-xs text-text-muted">
-                      {['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'][i]}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </main>
+        </Card>
       </div>
     </ProtectedPage>
   )

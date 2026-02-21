@@ -1,9 +1,10 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import AppLayout from '@/components/layout/AppLayout'
 
 export const metadata: Metadata = {
-  title: 'MG Inventory - Gestion Commerciale',
-  description: 'Système de gestion pour matériaux de construction',
+  title: 'MG Inventory',
+  description: 'Système de gestion commerciale',
 }
 
 export default function RootLayout({
@@ -13,8 +14,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="fr">
-      <body className="antialiased">
-        {children}
+      <body>
+        <AppLayout>
+          {children}
+        </AppLayout>
       </body>
     </html>
   )
