@@ -1,114 +1,122 @@
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
+'use client'
 
-/**
- * PAGE ADMIN - AVEC AUTO-REDIRECTION
- * 
- * Cette page vérifie le rôle et redirige vers le bon dashboard
- */
+import Link from 'next/link'
+import Card from '@/components/ui/Card'
+import ProtectedPage from '@/components/ProtectedPage'
 
-export default async function AdminPage() {
-  const supabase = await createClient()
-
-  // Vérifie l'authentification
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
-
-  if (authError || !user) {
-    redirect('/login')
+export default function AdminDashboard() {
+  const stats = {
+    users: 12,
+    orders: 145,
+    revenue: 8450000,
+    products: 234,
   }
 
-  // Récupère le rôle (sans crash si erreur)
-  let userRole = 'admin' // Valeur par défaut
-  
-  try {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role, full_name')
-      .eq('id', user.id)
-      .maybeSingle() // maybeSingle() au lieu de single() pour éviter les erreurs
+  const quickActions = [
+    { icon: '👥', label: 'Gérer utilisateurs', href: '/admin/users', color: 'bg-blue-500' },
+    { icon: '⚙️', label: 'Paramètres', href: '/admin/settings', color: 'bg-purple-500' },
+    { icon: '📊', label: 'Rapports', href: '#', color: 'bg-green-500' },
+    { icon: '🔔', label: 'Notifications', href: '#', color: 'bg-yellow-500' },
+  ]
 
-    if (profile && profile.role) {
-      userRole = profile.role
-      
-      // Si pas admin, redirige vers son dashboard
-      if (profile.role !== 'admin') {
-        redirect(`/${profile.role}`)
-      }
-    }
-  } catch (error) {
-    console.error('Erreur récupération profil:', error)
-    // Continue avec le rôle par défaut
-  }
-
-  // Fonction de déconnexion
-  async function handleLogout() {
-    'use server'
-    const supabase = await createClient()
-    await supabase.auth.signOut()
-    redirect('/login')
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('fr-FR').format(price) + ' Ar'
   }
 
   return (
-    <div className="min-h-screen bg-dark-bg">
-      <header className="glass-container mx-4 mt-4">
-        <div className="max-w-7xl mx-auto px-6 py-6 flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-text-primary">Dashboard Admin</h1>
-            <p className="text-sm text-text-secondary mt-1">Bienvenue, {user.email}</p>
-          </div>
-          <form action={handleLogout}>
-            <button
-              type="submit"
-              className="btn-secondary"
-            >
-              Déconnexion
-            </button>
-          </form>
+    <ProtectedPage allowedRoles={['admin']}>
+      <div className="p-8 space-y-8">
+        <div>
+          <h1 className="text-3xl font-bold text-text-primary">Dashboard Admin</h1>
+          <p className="text-text-secondary mt-1">Vue d'ensemble du système</p>
         </div>
-      </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="card-dark">
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <Card className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-text-secondary">Utilisateurs</p>
-                <p className="text-3xl font-bold text-text-primary">12</p>
+                <p className="text-3xl font-bold text-text-primary">{stats.users}</p>
               </div>
               <div className="text-4xl">👥</div>
             </div>
-          </div>
+          </Card>
 
-          <div className="card-dark">
+          <Card className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-text-secondary">Gérants</p>
-                <p className="text-3xl font-bold text-text-primary">3</p>
+                <p className="text-sm text-text-secondary">Commandes</p>
+                <p className="text-3xl font-bold text-text-primary">{stats.orders}</p>
               </div>
-              <div className="text-4xl">🧑‍💼</div>
+              <div className="text-4xl">🛒</div>
             </div>
-          </div>
+          </Card>
 
-          <div className="card-dark">
+          <Card className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-text-secondary">Revendeurs</p>
-                <p className="text-3xl font-bold text-text-primary">8</p>
+                <p className="text-sm text-text-secondary">CA Total</p>
+                <p className="text-xl font-bold text-accent-yellow">{formatPrice(stats.revenue)}</p>
               </div>
-              <div className="text-4xl">🧑‍💻</div>
+              <div className="text-4xl">💰</div>
             </div>
+          </Card>
+
+          <Card className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-text-secondary">Produits</p>
+                <p className="text-3xl font-bold text-text-primary">{stats.products}</p>
+              </div>
+              <div className="text-4xl">📦</div>
+            </div>
+          </Card>
+        </div>
+
+        {/* Quick Actions */}
+        <div>
+          <h2 className="text-xl font-bold text-text-primary mb-4">Actions rapides</h2>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {quickActions.map((action, i) => (
+              <Link
+                key={i}
+                href={action.href}
+                className="block"
+              >
+                <Card className="p-6 hover:scale-105 transition-transform cursor-pointer">
+                  <div className="flex items-center gap-4">
+                    <div className={`w-12 h-12 ${action.color} bg-opacity-20 rounded-lg flex items-center justify-center text-2xl`}>
+                      {action.icon}
+                    </div>
+                    <span className="font-semibold text-text-primary">{action.label}</span>
+                  </div>
+                </Card>
+              </Link>
+            ))}
           </div>
         </div>
 
-        <div className="mt-8 elevated-container p-6">
-          <h2 className="text-lg font-semibold text-text-primary mb-2">
-            ✅ Authentification fonctionnelle
-          </h2>
-          <p className="text-text-secondary">
-            Vous êtes connecté en tant qu'administrateur. Le système de rôles fonctionne correctement.
-          </p>
-        </div>
-      </main>
-    </div>
+        {/* Recent Activity */}
+        <Card className="p-6">
+          <h2 className="text-xl font-bold text-text-primary mb-4">Activité récente</h2>
+          <div className="space-y-3">
+            {[
+              { user: 'Jean Dupont', action: 'a créé un compte revendeur', time: 'Il y a 5 min' },
+              { user: 'Marie Martin', action: 'a validé une commande', time: 'Il y a 12 min' },
+              { user: 'Pierre Durand', action: 'a modifié les paramètres', time: 'Il y a 1h' },
+            ].map((item, i) => (
+              <div key={i} className="flex items-center justify-between py-2 border-b border-dark-border last:border-0">
+                <div>
+                  <span className="text-text-primary font-medium">{item.user}</span>
+                  <span className="text-text-secondary"> {item.action}</span>
+                </div>
+                <span className="text-text-muted text-sm">{item.time}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+    </ProtectedPage>
   )
 }
