@@ -1,7 +1,6 @@
 'use client'
 
 import { usePathname } from 'next/navigation'
-import { useEffect, useState } from 'react'
 import Sidebar from './Sidebar'
 import Navbar from './Navbar'
 
@@ -11,24 +10,12 @@ interface AppLayoutProps {
 
 export default function AppLayout({ children }: AppLayoutProps) {
   const pathname = usePathname()
-  const [isClient, setIsClient] = useState(false)
-
-  // S'assurer qu'on est côté client
-  useEffect(() => {
-    setIsClient(true)
-  }, [])
 
   // Pages sans layout (login, register, etc.)
   const publicPages = ['/login', '/register', '/forgot-password', '/']
   const isPublicPage = publicPages.includes(pathname)
 
-  // Si page publique, pas de layout
   if (isPublicPage) {
-    return <>{children}</>
-  }
-
-  // Attendre que le client soit prêt avant d'afficher Sidebar/Navbar
-  if (!isClient) {
     return <>{children}</>
   }
 

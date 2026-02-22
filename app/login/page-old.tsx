@@ -1,8 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { login } from '@/lib/auth/mockAuth'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import Card, { CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/Card'
@@ -21,21 +21,15 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      const supabase = createClient()
-      
-      // Connexion
-      const { error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
+      const { user, error: authError } = await login(email, password)
 
-      if (authError) {
-        throw new Error('Email ou mot de passe incorrect')
+      if (authError || !user) {
+        throw new Error(authError || 'Erreur de connexion')
       }
 
-      // Redirection simple vers /admin
-      // La page admin vérifiera le rôle et redirigera si besoin
-      window.location.href = '/admin'
+      // Redirige vers le dashboard approprié
+      router.push(`/${user.role}`)
+      router.refresh()
 
     } catch (err: any) {
       setError(err.message || 'Erreur de connexion')
@@ -59,6 +53,11 @@ export default function LoginPage() {
           <p className="text-text-secondary">
             Système de gestion commerciale
           </p>
+          <div className="mt-2 px-4 py-2 bg-accent-yellow/20 border border-accent-yellow/30 rounded-lg">
+            <p className="text-xs text-accent-yellow font-semibold">
+              🔧 MODE DÉMO (sans Supabase)
+            </p>
+          </div>
         </div>
 
         <Card glow>
@@ -99,15 +98,6 @@ export default function LoginPage() {
                 }
               />
 
-              <div className="text-right">
-                <Link 
-                  href="/forgot-password" 
-                  className="text-sm text-accent-yellow hover:text-accent-yellow-light transition-colors"
-                >
-                  Mot de passe oublié ?
-                </Link>
-              </div>
-
               {error && (
                 <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg text-sm">
                   {error}
@@ -128,13 +118,7 @@ export default function LoginPage() {
 
           <CardFooter>
             <p className="text-center text-sm text-text-secondary w-full">
-              Pas encore de compte ?{' '}
-              <Link 
-                href="/register" 
-                className="text-accent-yellow hover:text-accent-yellow-light font-semibold transition-colors"
-              >
-                Créer un compte
-              </Link>
+              Mode démo - Authentification locale
             </p>
           </CardFooter>
         </Card>

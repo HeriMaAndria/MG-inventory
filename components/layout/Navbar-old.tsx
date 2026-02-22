@@ -1,27 +1,18 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { getCurrentUser, logout } from '@/lib/auth/mockAuth'
 
 export default function Navbar() {
   const router = useRouter()
-  const [user, setUser] = useState<ReturnType<typeof getCurrentUser>>(null)
-  const [isClient, setIsClient] = useState(false)
-
-  useEffect(() => {
-    setIsClient(true)
-    setUser(getCurrentUser())
-  }, [])
+  const user = getCurrentUser()
 
   const handleLogout = () => {
     logout()
     router.push('/login')
   }
 
-  if (!isClient || !user) {
-    return null
-  }
+  if (!user) return null
 
   return (
     <nav className="h-16 bg-dark-surface border-b border-dark-border px-6 flex items-center justify-between sticky top-0 z-30">

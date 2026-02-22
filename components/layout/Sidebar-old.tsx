@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { getCurrentUser } from '@/lib/auth/mockAuth'
@@ -34,20 +34,10 @@ const menuItems: MenuItem[] = [
 
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false)
-  const [isClient, setIsClient] = useState(false)
   const pathname = usePathname()
-  const [user, setUser] = useState<ReturnType<typeof getCurrentUser>>(null)
+  const user = getCurrentUser()
 
-  // Charger l'utilisateur côté client uniquement
-  useEffect(() => {
-    setIsClient(true)
-    setUser(getCurrentUser())
-  }, [])
-
-  // Ne rien afficher tant qu'on n'est pas côté client
-  if (!isClient || !user) {
-    return null
-  }
+  if (!user) return null
 
   // Filtrer les items selon le rôle
   const visibleItems = menuItems.filter(item => item.roles.includes(user.role))
