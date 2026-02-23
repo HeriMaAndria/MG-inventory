@@ -23,6 +23,7 @@ const menuItems: MenuItem[] = [
   { icon: '📦', label: 'Stock', href: '/gerant/stock', roles: ['gerant'] },
   { icon: '🛒', label: 'Commandes', href: '/gerant/commandes', roles: ['gerant'] },
   { icon: '🧾', label: 'Factures', href: '/gerant/factures', roles: ['gerant'] },
+  { icon: '👥', label: 'Revendeurs', href: '/gerant/revendeurs', roles: ['gerant'] },
   
   // Revendeur
   { icon: '📊', label: 'Dashboard', href: '/revendeur', roles: ['revendeur'] },

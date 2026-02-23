@@ -3,6 +3,8 @@
 import Link from 'next/link'
 import Card from '@/components/ui/Card'
 import ProtectedPage from '@/components/ProtectedPage'
+import RevenueChart from '@/components/charts/RevenueChart'
+import TopProductsChart from '@/components/charts/TopProductsChart'
 
 export default function GerantDashboard() {
   const stats = {
@@ -16,7 +18,25 @@ export default function GerantDashboard() {
     { icon: '📦', label: 'Gérer le stock', href: '/gerant/stock', color: 'bg-blue-500' },
     { icon: '🛒', label: 'Commandes', href: '/gerant/commandes', color: 'bg-green-500' },
     { icon: '🧾', label: 'Factures', href: '/gerant/factures', color: 'bg-yellow-500' },
-    { icon: '📊', label: 'Rapports', href: '#', color: 'bg-purple-500' },
+    { icon: '👥', label: 'Revendeurs', href: '/gerant/revendeurs', color: 'bg-purple-500' },
+  ]
+
+  // Données mock pour les graphiques
+  const revenueData = [
+    { month: 'Jan', revenue: 2400000 },
+    { month: 'Fév', revenue: 2800000 },
+    { month: 'Mar', revenue: 3200000 },
+    { month: 'Avr', revenue: 2900000 },
+    { month: 'Mai', revenue: 3500000 },
+    { month: 'Juin', revenue: 4200000 },
+  ]
+
+  const topProductsData = [
+    { name: 'Tôle ondulée', sales: 245 },
+    { name: 'Vis', sales: 189 },
+    { name: 'Panne C', sales: 156 },
+    { name: 'Bardage', sales: 134 },
+    { name: 'Accessoires', sales: 98 },
   ]
 
   return (
@@ -87,6 +107,21 @@ export default function GerantDashboard() {
               </Link>
             ))}
           </div>
+        </div>
+
+        {/* Graphiques */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Évolution CA */}
+          <Card className="p-6">
+            <h2 className="text-xl font-bold text-text-primary mb-4">📈 Évolution du CA</h2>
+            <RevenueChart data={revenueData} />
+          </Card>
+
+          {/* Top Produits */}
+          <Card className="p-6">
+            <h2 className="text-xl font-bold text-text-primary mb-4">🏆 Top Produits</h2>
+            <TopProductsChart data={topProductsData} />
+          </Card>
         </div>
 
         {/* Alerts */}
