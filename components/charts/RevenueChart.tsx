@@ -44,7 +44,10 @@ export default function RevenueChart({ data }: RevenueChartProps) {
               borderRadius: '8px',
               color: '#fff'
             }}
-            formatter={(value: number | string) => [formatPrice(Number(value)), 'CA']}
+            formatter={(value: number | string | undefined) => {
+              if (value === undefined) return ['0', 'CA']
+              return [formatPrice(Number(value)), 'CA']
+            }}
           />
           <Legend />
           <Line 

@@ -38,7 +38,10 @@ export default function TopProductsChart({ data }: TopProductsChartProps) {
               borderRadius: '8px',
               color: '#fff'
             }}
-            formatter={(value: number | string) => [Number(value), 'Ventes']}
+            formatter={(value: number | string | undefined) => {
+              if (value === undefined) return [0, 'Ventes']
+              return [Number(value), 'Ventes']
+            }}
           />
           <Legend />
           <Bar 
