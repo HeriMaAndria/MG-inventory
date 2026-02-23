@@ -2,7 +2,7 @@
 
 /**
  * GRAPHIQUE ÉVOLUTION CHIFFRE D'AFFAIRES
- * Utilise recharts (à installer : npm install recharts)
+ * Utilise recharts
  */
 
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
@@ -44,7 +44,7 @@ export default function RevenueChart({ data }: RevenueChartProps) {
               borderRadius: '8px',
               color: '#fff'
             }}
-            formatter={(value: number) => [formatPrice(value), 'CA']}
+            formatter={(value: number | string) => [formatPrice(Number(value)), 'CA']}
           />
           <Legend />
           <Line 
