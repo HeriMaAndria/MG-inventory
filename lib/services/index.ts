@@ -6,14 +6,14 @@
 
 import { mockProductService } from './implementations/mockProductService'
 import { mockClientService } from './implementations/mockClientService'
-import { mockInvoiceService } from './implementations/mockInvoiceService'
+import { invoiceService } from './implementations/invoiceService'
 import { mockOrderService } from './implementations/mockOrderService'
 import { mockStatsService } from './implementations/mockStatsService'
 
 // Export des services actifs (Mock)
 export const productService = mockProductService
 export const clientService = mockClientService
-export const invoiceService = mockInvoiceService
+export const invoiceService = invoiceService
 export const orderService = mockOrderService
 export const statsService = mockStatsService
 

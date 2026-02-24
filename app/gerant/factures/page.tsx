@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect } from 'react'
-import { mockInvoiceService } from '@/lib/services/implementations/mockInvoiceService'
+import { invoiceService } from '@/lib/services/implementations/invoiceService'
 import type { Invoice } from '@/lib/types/models'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
@@ -20,7 +20,7 @@ export default function FacturesPage() {
 
   const loadInvoices = async () => {
     setLoading(true)
-    const { data } = await mockInvoiceService.getAll()
+    const { data } = await invoiceService.getAll()
     setInvoices(data || [])
     setLoading(false)
   }
@@ -30,12 +30,12 @@ export default function FacturesPage() {
   }, [])
 
   const handleValidate = async (id: string) => {
-    await mockInvoiceService.validate(id)
+    await invoiceService.validate(id)
     loadInvoices()
   }
 
   const handleMarkAsPaid = async (id: string) => {
-    await mockInvoiceService.markAsPaid(id)
+    await invoiceService.markAsPaid(id)
     loadInvoices()
   }
 
