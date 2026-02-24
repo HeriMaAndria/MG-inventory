@@ -4,7 +4,7 @@
  */
 
 import { generateFacturePDF } from '../pdf/facturePDF'
-import type { Invoice } from '@/lib/types/models'
+import type { Invoice } from '@/lib/types/invoice'
 
 export async function printFacture(invoice: Invoice): Promise<void> {
   try {

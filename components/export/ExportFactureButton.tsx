@@ -6,7 +6,7 @@
  */
 
 import { useState } from 'react'
-import type { Invoice } from '@/lib/types/models'
+import type { Invoice } from '@/lib/types/invoice'
 import { generateFacturePDF } from '@/lib/export/pdf/facturePDF'
 import { exportFactureToPNG } from '@/lib/export/image/facturePNG'
 import { printFacture } from '@/lib/export/pdf/printFacture'

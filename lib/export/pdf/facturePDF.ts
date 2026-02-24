@@ -5,7 +5,7 @@
 
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import type { Invoice } from '@/lib/types/models'
+import type { Invoice } from '@/lib/types/invoice'
 import { generateQRCode } from '../image/qrcodeGenerator'
 
 export async function generateFacturePDF(invoice: Invoice): Promise<jsPDF> {
@@ -92,8 +92,8 @@ export async function generateFacturePDF(invoice: Invoice): Promise<jsPDF> {
   const tableData = invoice.items.map(item => [
     item.product_name,
     item.quantity.toString(),
-    formatPrice(item.unit_price),
-    formatPrice(item.total),
+    formatPrice(item.prix_vente),
+    formatPrice(item.total_vente),
   ])
 
   autoTable(doc, {
@@ -133,12 +133,12 @@ export async function generateFacturePDF(invoice: Invoice): Promise<jsPDF> {
 
   // Sous-total
   doc.text('Sous-total HT:', labelX, y, { align: 'right' })
-  doc.text(formatPrice(invoice.subtotal), totalsX, y, { align: 'right' })
+  doc.text(formatPrice(invoice.subtotal_catalogue), totalsX, y, { align: 'right' })
   y += 8
 
   // Marge
   doc.text(`Marge (${invoice.marge_percentage}%):`, labelX, y, { align: 'right' })
-  doc.text(formatPrice(invoice.marge_amount), totalsX, y, { align: 'right' })
+  doc.text(formatPrice(invoice.marge_total), totalsX, y, { align: 'right' })
   y += 10
 
   // Total
