@@ -1,84 +1,17 @@
 /**
- * MOCK INVOICE SERVICE
- * Gestion des factures/devis
+ * SERVICE INVOICE MIS À JOUR
+ * Avec calcul automatique des marges
  */
 
-import type { IInvoiceService } from '../contracts'
-import type {
-  Invoice,
-  CreateInvoiceInput,
-  UpdateInvoiceInput,
-  InvoiceFilters,
-  ApiResponse,
-  InvoiceItem,
-} from '@/lib/types/models'
-
-const MOCK_INVOICES: Invoice[] = [
-  {
-    id: '1',
-    reference: 'DEV-001',
-    revendeur_id: 'revendeur-1',
-    revendeur_name: 'Revendeur Test',
-    client_id: '1',
-    client_name: 'Client A - Construction',
-    items: [
-      {
-        product_id: '1',
-        product_name: 'Tôle ondulée 2m',
-        quantity: 10,
-        unit_price: 15000,
-        total: 150000,
-      },
-      {
-        product_id: '2',
-        product_name: 'Vis autoperceuse 5mm',
-        quantity: 5,
-        unit_price: 2500,
-        total: 12500,
-      },
-    ],
-    subtotal: 162500,
-    marge_percentage: 15,
-    marge_amount: 24375,
-    total: 186875,
-    status: 'en_attente',
-    notes: null,
-    created_at: '2025-02-10T10:00:00Z',
-    updated_at: '2025-02-10T10:00:00Z',
-    validated_at: null,
-    paid_at: null,
-  },
-  {
-    id: '2',
-    reference: 'FAC-002',
-    revendeur_id: 'revendeur-1',
-    revendeur_name: 'Revendeur Test',
-    client_id: '2',
-    client_name: 'Client B - Entreprise BTP',
-    items: [
-      {
-        product_id: '3',
-        product_name: 'Panne C 80x40',
-        quantity: 20,
-        unit_price: 8000,
-        total: 160000,
-      },
-    ],
-    subtotal: 160000,
-    marge_percentage: 18,
-    marge_amount: 28800,
-    total: 188800,
-    status: 'validée',
-    notes: 'Livraison urgente',
-    created_at: '2025-02-12T10:00:00Z',
-    updated_at: '2025-02-12T14:00:00Z',
-    validated_at: '2025-02-12T14:00:00Z',
-    paid_at: null,
-  },
-]
+import type { Invoice, InvoiceItem, InvoiceType, InvoiceStatus } from '@/lib/types/invoice'
+import { calculateInvoiceItem, calculateInvoiceTotals } from '@/lib/types/invoice'
+import { getCurrentUser } from '@/lib/auth/mockAuth'
 
 const STORAGE_KEY = 'mg_invoices'
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
+// Mock data initial
+const MOCK_INVOICES: Invoice[] = []
 
 const loadInvoices = (): Invoice[] => {
   if (typeof window === 'undefined') return MOCK_INVOICES
@@ -99,41 +32,122 @@ const saveInvoices = (invoices: Invoice[]) => {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(invoices))
 }
 
-export const mockInvoiceService: IInvoiceService = {
-  async getAll(filters?: InvoiceFilters): Promise<ApiResponse<Invoice[]>> {
+export const invoiceService = {
+  // Créer devis (revendeur)
+  async createDevis(data: {
+    client_id: string
+    client_name: string
+    items: Omit<InvoiceItem, 'total_catalogue' | 'total_vente' | 'marge_unitaire' | 'marge_total'>[]
+    notes?: string
+    revendeur_info: {
+      name: string
+      email: string
+      phone: string
+      address: string
+    }
+  }): Promise<{ data: Invoice | null; error: string | null }> {
     await delay(300)
     try {
-      let invoices = loadInvoices()
-      
-      if (filters?.revendeur_id) {
-        invoices = invoices.filter(i => i.revendeur_id === filters.revendeur_id)
+      const user = getCurrentUser()
+      if (!user) {
+        return { data: null, error: 'Non authentifié' }
       }
+
+      // Calculer items avec marges
+      const calculatedItems = data.items.map(calculateInvoiceItem)
       
-      if (filters?.status) {
-        invoices = invoices.filter(i => i.status === filters.status)
+      // Calculer totaux
+      const totals = calculateInvoiceTotals(calculatedItems)
+      
+      const invoice: Invoice = {
+        id: `devis-${Date.now()}`,
+        reference: `${user.name.substring(0, 3).toUpperCase()}-DEVIS-${String(Date.now()).slice(-6)}`,
+        type: 'devis',
+        status: 'en_attente',
+        revendeur_id: user.id,
+        revendeur_name: user.name,
+        client_id: data.client_id,
+        client_name: data.client_name,
+        items: calculatedItems,
+        ...totals,
+        revendeur_info: data.revendeur_info,
+        created_at: new Date().toISOString(),
+        notes: data.notes,
       }
+
+      const invoices = loadInvoices()
+      invoices.push(invoice)
+      saveInvoices(invoices)
+
+      return { data: invoice, error: null }
+    } catch (err: any) {
+      return { data: null, error: err.message }
+    }
+  },
+
+  // Convertir devis → facture (gérant)
+  async convertDevisToFacture(
+    devisId: string,
+    type: 'facture' | 'proforma' | 'bon_commande'
+  ): Promise<{ data: Invoice | null; error: string | null }> {
+    await delay(300)
+    try {
+      const invoices = loadInvoices()
+      const devis = invoices.find(i => i.id === devisId)
       
-      if (filters?.search) {
-        const search = filters.search.toLowerCase()
-        invoices = invoices.filter(i =>
-          i.reference.toLowerCase().includes(search) ||
-          i.client_name?.toLowerCase().includes(search)
-        )
+      if (!devis) {
+        return { data: null, error: 'Devis non trouvé' }
       }
+
+      if (devis.type !== 'devis') {
+        return { data: null, error: 'Ce document n\'est pas un devis' }
+      }
+
+      // Créer facture en gardant les mêmes items (marge déjà calculée)
+      const facture: Invoice = {
+        ...devis,
+        id: `fact-${Date.now()}`,
+        reference: `FACT-${String(Date.now()).slice(-6)}`,
+        type: type,
+        status: 'validée',
+        revendeur_info: undefined, // Retirer infos revendeur
+        origine_devis_ref: devis.reference,
+        validated_at: new Date().toISOString(),
+      }
+
+      invoices.push(facture)
       
+      // Marquer le devis comme converti (optionnel)
+      devis.status = 'validée'
+      devis.notes = (devis.notes || '') + `\n[Converti en ${type} ${facture.reference}]`
+      
+      saveInvoices(invoices)
+
+      return { data: facture, error: null }
+    } catch (err: any) {
+      return { data: null, error: err.message }
+    }
+  },
+
+  // Lire tous
+  async getAll(): Promise<{ data: Invoice[] | null; error: string | null }> {
+    await delay(200)
+    try {
+      const invoices = loadInvoices()
       return { data: invoices, error: null }
     } catch (err: any) {
       return { data: null, error: err.message }
     }
   },
 
-  async getById(id: string): Promise<ApiResponse<Invoice>> {
+  // Lire par ID
+  async getById(id: string): Promise<{ data: Invoice | null; error: string | null }> {
     await delay(200)
     try {
       const invoices = loadInvoices()
       const invoice = invoices.find(i => i.id === id)
       if (!invoice) {
-        return { data: null, error: 'Facture non trouvée' }
+        return { data: null, error: 'Document non trouvé' }
       }
       return { data: invoice, error: null }
     } catch (err: any) {
@@ -141,175 +155,68 @@ export const mockInvoiceService: IInvoiceService = {
     }
   },
 
-  async create(data: CreateInvoiceInput): Promise<ApiResponse<Invoice>> {
-    await delay(400)
+  // Mettre à jour
+  async update(id: string, data: Partial<Invoice>): Promise<{ data: Invoice | null; error: string | null }> {
+    await delay(300)
     try {
       const invoices = loadInvoices()
+      const index = invoices.findIndex(i => i.id === id)
       
-      // Calculer le subtotal
-      const subtotal = data.items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0)
-      const marge_amount = (subtotal * data.marge_percentage) / 100
-      const total = subtotal + marge_amount
-      
-      // Créer les items complets avec product_name et total
-      const completeItems: InvoiceItem[] = data.items.map(item => ({
-        product_id: item.product_id,
-        product_name: `Produit ${item.product_id}`, // À remplacer par le vrai nom en production
-        quantity: item.quantity,
-        unit_price: item.unit_price,
-        total: item.quantity * item.unit_price,
-      }))
-      
-      const newInvoice: Invoice = {
-        id: Date.now().toString(),
-        reference: `DEV-${String(invoices.length + 1).padStart(3, '0')}`,
-        revendeur_id: data.revendeur_id,
-        revendeur_name: 'Revendeur Test', // À remplacer par le vrai nom
-        client_id: data.client_id || null,
-        client_name: data.client_name || null,
-        items: completeItems,
-        subtotal,
-        marge_percentage: data.marge_percentage,
-        marge_amount,
-        total,
-        status: 'brouillon',
-        notes: data.notes || null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        validated_at: null,
-        paid_at: null,
-      }
-      
-      invoices.push(newInvoice)
-      saveInvoices(invoices)
-      return { data: newInvoice, error: null }
-    } catch (err: any) {
-      return { data: null, error: err.message }
-    }
-  },
-
-  async update(data: UpdateInvoiceInput): Promise<ApiResponse<Invoice>> {
-    await delay(400)
-    try {
-      const invoices = loadInvoices()
-      const index = invoices.findIndex(i => i.id === data.id)
       if (index === -1) {
-        return { data: null, error: 'Facture non trouvée' }
+        return { data: null, error: 'Document non trouvé' }
       }
-      
-      // Copier l'invoice existante
-      const updated: Invoice = {
-        ...invoices[index],
-        updated_at: new Date().toISOString(),
-      }
-      
-      // Mettre à jour les champs simples
-      if (data.status !== undefined) {
-        updated.status = data.status
-      }
-      if (data.notes !== undefined) {
-        updated.notes = data.notes || null
-      }
-      if (data.client_id !== undefined) {
-        updated.client_id = data.client_id || null
-      }
-      if (data.client_name !== undefined) {
-        updated.client_name = data.client_name || null
-      }
-      
-      // Si les items ou la marge changent, recalculer tout
-      if (data.items || data.marge_percentage !== undefined) {
-        // Utiliser les nouveaux items ou garder les anciens
-        const itemsToUse = data.items ? data.items : updated.items.map(item => ({
-          product_id: item.product_id,
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-        }))
+
+      // Si les items changent, recalculer
+      if (data.items) {
+        const calculatedItems = data.items.map(calculateInvoiceItem)
+        const totals = calculateInvoiceTotals(calculatedItems)
         
-        // Créer les items complets
-        const completeItems: InvoiceItem[] = itemsToUse.map(item => ({
-          product_id: item.product_id,
-          product_name: `Produit ${item.product_id}`, // À remplacer
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-          total: item.quantity * item.unit_price,
-        }))
-        
-        // Recalculer les totaux
-        const subtotal = completeItems.reduce((sum, item) => sum + item.total, 0)
-        const marge_percentage = data.marge_percentage !== undefined ? data.marge_percentage : updated.marge_percentage
-        const marge_amount = (subtotal * marge_percentage) / 100
-        const total = subtotal + marge_amount
-        
-        updated.items = completeItems
-        updated.subtotal = subtotal
-        updated.marge_percentage = marge_percentage
-        updated.marge_amount = marge_amount
-        updated.total = total
+        invoices[index] = {
+          ...invoices[index],
+          ...data,
+          items: calculatedItems,
+          ...totals,
+        }
+      } else {
+        invoices[index] = {
+          ...invoices[index],
+          ...data,
+        }
       }
-      
-      invoices[index] = updated
+
       saveInvoices(invoices)
-      return { data: updated, error: null }
+      return { data: invoices[index], error: null }
     } catch (err: any) {
       return { data: null, error: err.message }
     }
   },
 
-  async delete(id: string): Promise<ApiResponse<void>> {
+  // Valider
+  async validate(id: string): Promise<{ data: Invoice | null; error: string | null }> {
+    return this.update(id, {
+      status: 'validée',
+      validated_at: new Date().toISOString(),
+    })
+  },
+
+  // Marquer comme payée
+  async markAsPaid(id: string): Promise<{ data: Invoice | null; error: string | null }> {
+    return this.update(id, {
+      status: 'payée',
+      paid_at: new Date().toISOString(),
+    })
+  },
+
+  // Supprimer
+  async delete(id: string): Promise<{ data: boolean; error: string | null }> {
     await delay(300)
     try {
       const invoices = loadInvoices()
       const filtered = invoices.filter(i => i.id !== id)
-      if (filtered.length === invoices.length) {
-        return { data: null, error: 'Facture non trouvée' }
-      }
       saveInvoices(filtered)
-      return { data: undefined, error: null }
+      return { data: true, error: null }
     } catch (err: any) {
-      return { data: null, error: err.message }
+      return { data: false, error: err.message }
     }
-  },
-
-  async validate(id: string): Promise<ApiResponse<Invoice>> {
-    await delay(300)
-    try {
-      const invoices = loadInvoices()
-      const invoice = invoices.find(i => i.id === id)
-      if (!invoice) {
-        return { data: null, error: 'Facture non trouvée' }
-      }
-      invoice.status = 'validée'
-      invoice.validated_at = new Date().toISOString()
-      invoice.updated_at = new Date().toISOString()
-      saveInvoices(invoices)
-      return { data: invoice, error: null }
-    } catch (err: any) {
-      return { data: null, error: err.message }
-    }
-  },
-
-  async markAsPaid(id: string): Promise<ApiResponse<Invoice>> {
-    await delay(300)
-    try {
-      const invoices = loadInvoices()
-      const invoice = invoices.find(i => i.id === id)
-      if (!invoice) {
-        return { data: null, error: 'Facture non trouvée' }
-      }
-      invoice.status = 'payée'
-      invoice.paid_at = new Date().toISOString()
-      invoice.updated_at = new Date().toISOString()
-      saveInvoices(invoices)
-      return { data: invoice, error: null }
-    } catch (err: any) {
-      return { data: null, error: err.message }
-    }
-  },
-
-  async generatePDF(id: string): Promise<ApiResponse<Blob>> {
-    await delay(500)
-    // Mock PDF generation
-    return { data: null, error: 'Génération PDF non implémentée en mode mock' }
   },
 }
