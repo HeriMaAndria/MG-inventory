@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect } from 'react'
-import { invoiceService } from '@/lib/services/implementations/invoiceService'
+import { invoiceService } from '@/lib/services' // ✅ Fix: import depuis l'index, pas depuis l'implémentation directe
 import type { Invoice } from '@/lib/types/models'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'

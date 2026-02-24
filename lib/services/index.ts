@@ -6,14 +6,14 @@
 
 import { mockProductService } from './implementations/mockProductService'
 import { mockClientService } from './implementations/mockClientService'
-import { invoiceService } from './implementations/invoiceService'
+import { invoiceService as mockInvoiceService } from './implementations/mockInvoiceService' // ✅ Fix: bon nom de fichier + alias pour éviter le conflit
 import { mockOrderService } from './implementations/mockOrderService'
 import { mockStatsService } from './implementations/mockStatsService'
 
 // Export des services actifs (Mock)
 export const productService = mockProductService
 export const clientService = mockClientService
-export const invoiceService = invoiceService
+export const invoiceService = mockInvoiceService // ✅ Fix: plus de self-référence
 export const orderService = mockOrderService
 export const statsService = mockStatsService
 
