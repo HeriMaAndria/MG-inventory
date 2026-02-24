@@ -6,8 +6,8 @@
  */
 
 import { useState, useEffect } from 'react'
-import { invoiceService } from '@/lib/services' // ✅ Fix: import depuis l'index, pas depuis l'implémentation directe
-import type { Invoice } from '@/lib/types/models'
+import { invoiceService } from '@/lib/services'
+import type { Invoice } from '@/lib/types/invoice' // ✅ Fix: import depuis le bon fichier de types (utilisé par le service)
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import ProtectedPage from '@/components/ProtectedPage'
@@ -179,11 +179,13 @@ export default function FacturesPage() {
                       <div className="space-y-2">
                         <div className="flex justify-between text-sm">
                           <span className="text-text-secondary">Sous-total HT:</span>
-                          <span className="text-text-primary font-medium">{formatPrice(invoice.subtotal)}</span>
+                          {/* ✅ Fix: subtotal → subtotal_catalogue (prix de base entreprise) */}
+                          <span className="text-text-primary font-medium">{formatPrice(invoice.subtotal_catalogue)}</span>
                         </div>
                         <div className="flex justify-between text-sm">
-                          <span className="text-text-secondary">Marge ({invoice.marge_percentage}%):</span>
-                          <span className="text-text-primary font-medium">{formatPrice(invoice.marge_amount)}</span>
+                          <span className="text-text-secondary">Marge ({invoice.marge_percentage.toFixed(1)}%):</span>
+                          {/* ✅ Fix: marge_amount → marge_total */}
+                          <span className="text-text-primary font-medium">{formatPrice(invoice.marge_total)}</span>
                         </div>
                         <div className="flex justify-between pt-2 border-t border-dark-border">
                           <span className="text-text-primary font-bold">Total TTC:</span>
@@ -249,10 +251,11 @@ export default function FacturesPage() {
                             <div>
                               <p className="text-text-primary font-medium">{item.product_name}</p>
                               <p className="text-text-muted text-sm">
-                                {item.quantity} x {formatPrice(item.unit_price)}
+                                {/* ✅ Fix: unit_price → prix_vente | total → total_vente */}
+                                {item.quantity} x {formatPrice(item.prix_vente)}
                               </p>
                             </div>
-                            <span className="text-text-primary font-bold">{formatPrice(item.total)}</span>
+                            <span className="text-text-primary font-bold">{formatPrice(item.total_vente)}</span>
                           </div>
                         ))}
                       </div>
