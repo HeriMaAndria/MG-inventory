@@ -4,7 +4,7 @@
  * TABLEAU FACTURES/DEVIS
  */
 
-import type { Invoice } from '@/lib/types/models'
+import type { Invoice } from '@/lib/types/invoice' // ✅ Fix: bon fichier de types
 
 interface InvoiceTableProps {
   invoices: Invoice[]
@@ -23,22 +23,24 @@ export default function InvoiceTable({ invoices, onView, onDelete, onValidate, o
     return new Date(dateString).toLocaleDateString('fr-FR')
   }
 
-  const StatusBadge = ({ status }: { status: Invoice['status'] }) => {
+  const StatusBadge = ({ status }: { status: string }) => {
     const colors: Record<string, string> = {
-      'brouillon': 'bg-gray-500/20 text-gray-400 border-gray-500/30',
       'en_attente': 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
       'validée': 'bg-blue-500/20 text-blue-400 border-blue-500/30',
       'payée': 'bg-green-500/20 text-green-400 border-green-500/30',
       'annulée': 'bg-red-500/20 text-red-400 border-red-500/30',
     }
     const labels: Record<string, string> = {
-      'brouillon': 'Brouillon',
       'en_attente': 'En attente',
       'validée': 'Validée',
       'payée': 'Payée',
       'annulée': 'Annulée',
     }
-    return <span className={`badge ${colors[status]}`}>{labels[status]}</span>
+    return (
+      <span className={`px-3 py-1 rounded-full text-xs font-medium border ${colors[status] || 'bg-gray-500/20 text-gray-400 border-gray-500/30'}`}>
+        {labels[status] || status}
+      </span>
+    )
   }
 
   if (invoices.length === 0) {
@@ -110,7 +112,7 @@ export default function InvoiceTable({ invoices, onView, onDelete, onValidate, o
                         💰
                       </button>
                     )}
-                    {onDelete && invoice.status === 'brouillon' && (
+                    {onDelete && (
                       <button
                         onClick={() => onDelete(invoice.id)}
                         className="text-red-400 hover:text-red-300"

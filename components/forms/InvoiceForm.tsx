@@ -6,6 +6,7 @@
 
 import { useState, useEffect } from 'react'
 import { invoiceService, clientService, productService } from '@/lib/services'
+import { getCurrentUser } from '@/lib/auth/mockAuth'
 import type { Client, Product } from '@/lib/types/models'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
@@ -16,19 +17,21 @@ interface InvoiceFormProps {
   onCancel: () => void
 }
 
-interface InvoiceItem {
+// ✅ Fix: champs alignés avec InvoiceItem de invoice.ts (prix_catalogue + prix_vente)
+interface LocalItem {
   product_id: string
   product_name: string
   quantity: number
-  unit_price: number
+  prix_catalogue: number
+  prix_vente: number
+  unit: string
 }
 
 export default function InvoiceForm({ revendeurId, onSuccess, onCancel }: InvoiceFormProps) {
   const [clients, setClients] = useState<Client[]>([])
   const [products, setProducts] = useState<Product[]>([])
   const [selectedClient, setSelectedClient] = useState('')
-  const [items, setItems] = useState<InvoiceItem[]>([])
-  const [margePercentage, setMargePercentage] = useState(15)
+  const [items, setItems] = useState<LocalItem[]>([])
   const [notes, setNotes] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -47,7 +50,14 @@ export default function InvoiceForm({ revendeurId, onSuccess, onCancel }: Invoic
   }
 
   const addItem = () => {
-    setItems([...items, { product_id: '', product_name: '', quantity: 1, unit_price: 0 }])
+    setItems([...items, {
+      product_id: '',
+      product_name: '',
+      quantity: 1,
+      prix_catalogue: 0,
+      prix_vente: 0,
+      unit: 'unité',
+    }])
   }
 
   const removeItem = (index: number) => {
@@ -63,7 +73,10 @@ export default function InvoiceForm({ revendeurId, onSuccess, onCancel }: Invoic
           ...newItems[index],
           product_id: value,
           product_name: product.name,
-          unit_price: product.price,
+          // ✅ Fix: initialiser les deux prix au prix catalogue du produit
+          prix_catalogue: product.price,
+          prix_vente: product.price,
+          unit: product.unit,
         }
       }
     } else {
@@ -73,15 +86,11 @@ export default function InvoiceForm({ revendeurId, onSuccess, onCancel }: Invoic
   }
 
   const calculateSubtotal = () => {
-    return items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0)
+    return items.reduce((sum, item) => sum + (item.quantity * item.prix_vente), 0)
   }
 
-  const calculateMarge = () => {
-    return (calculateSubtotal() * margePercentage) / 100
-  }
-
-  const calculateTotal = () => {
-    return calculateSubtotal() + calculateMarge()
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('fr-FR').format(price) + ' Ar'
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -90,33 +99,37 @@ export default function InvoiceForm({ revendeurId, onSuccess, onCancel }: Invoic
     setLoading(true)
 
     try {
-      if (!selectedClient) {
-        throw new Error('Sélectionnez un client')
-      }
-      if (items.length === 0) {
-        throw new Error('Ajoutez au moins un produit')
-      }
+      if (!selectedClient) throw new Error('Sélectionnez un client')
+      if (items.length === 0) throw new Error('Ajoutez au moins un produit')
       if (items.some(item => !item.product_id || item.quantity <= 0)) {
         throw new Error('Vérifiez tous les produits')
       }
 
+      const user = getCurrentUser()
       const client = clients.find(c => c.id === selectedClient)
-      const result = await invoiceService.create({
-        revendeur_id: revendeurId,
+
+      // ✅ Fix: utiliser createDevis() à la place de create() qui n'existe pas
+      const result = await invoiceService.createDevis({
         client_id: selectedClient,
-        client_name: client?.name,
+        client_name: client?.name || 'Client',
         items: items.map(item => ({
           product_id: item.product_id,
+          product_name: item.product_name,
+          prix_catalogue: item.prix_catalogue,
+          prix_vente: item.prix_vente,
           quantity: item.quantity,
-          unit_price: item.unit_price,
+          unit: item.unit,
         })),
-        marge_percentage: margePercentage,
         notes: notes || undefined,
+        revendeur_info: {
+          name: user?.name || 'Revendeur',
+          email: user?.email || '',
+          phone: '+261 34 00 000 00',
+          address: 'Antananarivo, Madagascar',
+        },
       })
 
-      if (result.error) {
-        throw new Error(result.error)
-      }
+      if (result.error) throw new Error(result.error)
 
       onSuccess()
     } catch (err: any) {
@@ -124,10 +137,6 @@ export default function InvoiceForm({ revendeurId, onSuccess, onCancel }: Invoic
     } finally {
       setLoading(false)
     }
-  }
-
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('fr-FR').format(price) + ' Ar'
   }
 
   return (
@@ -181,55 +190,55 @@ export default function InvoiceForm({ revendeurId, onSuccess, onCancel }: Invoic
                 </button>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <Input
-                  type="number"
-                  label="Quantité"
-                  value={item.quantity}
-                  onChange={(e) => updateItem(index, 'quantity', parseInt(e.target.value))}
-                  min="1"
-                  required
-                />
-                <div>
-                  <label className="label-dark">Total ligne</label>
-                  <div className="input-dark bg-dark-elevated">
-                    {formatPrice(item.quantity * item.unit_price)}
+              {item.product_id && (
+                <div className="grid grid-cols-2 gap-3">
+                  <Input
+                    type="number"
+                    label="Prix vente"
+                    value={item.prix_vente}
+                    onChange={(e) => updateItem(index, 'prix_vente', parseFloat(e.target.value))}
+                    min={item.prix_catalogue}
+                    step="0.01"
+                    required
+                  />
+                  <Input
+                    type="number"
+                    label="Quantité"
+                    value={item.quantity}
+                    onChange={(e) => updateItem(index, 'quantity', parseInt(e.target.value))}
+                    min="1"
+                    required
+                  />
+                  <div>
+                    <label className="label-dark">Total ligne</label>
+                    <div className="input-dark bg-dark-elevated">
+                      {formatPrice(item.quantity * item.prix_vente)}
+                    </div>
                   </div>
+                  {item.prix_vente > item.prix_catalogue && (
+                    <div>
+                      <label className="label-dark">Marge</label>
+                      <div className="input-dark bg-dark-elevated text-green-400">
+                        +{formatPrice((item.prix_vente - item.prix_catalogue) * item.quantity)}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
+              )}
             </div>
           ))}
         </div>
       </div>
 
-      {/* Marge */}
-      <Input
-        type="number"
-        label="Marge (%)"
-        value={margePercentage}
-        onChange={(e) => setMargePercentage(parseFloat(e.target.value))}
-        min="0"
-        max="100"
-        step="0.1"
-        required
-      />
-
       {/* Récapitulatif */}
-      <div className="elevated-container p-4 space-y-2">
-        <div className="flex justify-between text-text-secondary">
-          <span>Sous-total :</span>
-          <span>{formatPrice(calculateSubtotal())}</span>
+      {items.length > 0 && (
+        <div className="elevated-container p-4 space-y-2">
+          <div className="flex justify-between text-xl font-bold text-text-primary">
+            <span>Total :</span>
+            <span>{formatPrice(calculateSubtotal())}</span>
+          </div>
         </div>
-        <div className="flex justify-between text-accent-yellow">
-          <span>Marge ({margePercentage}%) :</span>
-          <span>{formatPrice(calculateMarge())}</span>
-        </div>
-        <div className="divider-dark"></div>
-        <div className="flex justify-between text-xl font-bold text-text-primary">
-          <span>Total :</span>
-          <span>{formatPrice(calculateTotal())}</span>
-        </div>
-      </div>
+      )}
 
       {/* Notes */}
       <div>

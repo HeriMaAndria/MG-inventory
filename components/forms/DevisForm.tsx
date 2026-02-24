@@ -6,9 +6,8 @@
  */
 
 import { useState, useEffect } from 'react'
-import { productService } from '@/lib/services'
-import { mockClientService } from '@/lib/services/implementations/mockClientService'
-import { invoiceService } from '@/lib/services/implementations/invoiceServiceV2'
+import { productService, clientService } from '@/lib/services'
+import { invoiceService } from '@/lib/services' // ✅ Fix: invoiceServiceV2 n'existe pas → import depuis l'index
 import { getCurrentUser } from '@/lib/auth/mockAuth'
 import type { Product, Client } from '@/lib/types/models'
 import type { InvoiceItem } from '@/lib/types/invoice'
@@ -25,7 +24,7 @@ export default function DevisForm({ onSuccess, onCancel }: DevisFormProps) {
   const [products, setProducts] = useState<Product[]>([])
   const [clients, setClients] = useState<Client[]>([])
   const [loading, setLoading] = useState(false)
-  const [user, setUser] = useState(getCurrentUser())
+  const [user] = useState(getCurrentUser())
 
   const [formData, setFormData] = useState({
     client_id: '',
@@ -48,9 +47,11 @@ export default function DevisForm({ onSuccess, onCancel }: DevisFormProps) {
   }, [])
 
   const loadData = async () => {
+    // ✅ Fix: getAll() requiert un revendeurId → on le récupère du user courant
+    const revendeurId = user?.id || 'revendeur-1'
     const [productsRes, clientsRes] = await Promise.all([
       productService.getAll(),
-      mockClientService.getAll(),
+      clientService.getAll(revendeurId),
     ])
     setProducts(productsRes.data || [])
     setClients(clientsRes.data || [])
@@ -65,8 +66,8 @@ export default function DevisForm({ onSuccess, onCancel }: DevisFormProps) {
       ...newItems[index],
       product_id: product.id,
       product_name: product.name,
-      prix_catalogue: product.price, // Prix base entreprise
-      prix_vente: product.price,     // Initialiser au même prix (revendeur modifiera)
+      prix_catalogue: product.price,
+      prix_vente: product.price,
       unit: product.unit,
     }
     setItems(newItems)
@@ -99,7 +100,6 @@ export default function DevisForm({ onSuccess, onCancel }: DevisFormProps) {
     setItems(items.filter((_, i) => i !== index))
   }
 
-  // Calculer preview marge
   const calculatePreview = () => {
     let totalCatalogue = 0
     let totalVente = 0
@@ -114,19 +114,14 @@ export default function DevisForm({ onSuccess, onCancel }: DevisFormProps) {
     const marge = totalVente - totalCatalogue
     const margePercentage = totalCatalogue > 0 ? (marge / totalCatalogue) * 100 : 0
 
-    return {
-      totalCatalogue,
-      totalVente,
-      marge,
-      margePercentage,
-    }
+    return { totalCatalogue, totalVente, marge, margePercentage }
   }
 
   const preview = calculatePreview()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!formData.client_id) {
       alert('Veuillez sélectionner un client')
       return
@@ -146,7 +141,7 @@ export default function DevisForm({ onSuccess, onCancel }: DevisFormProps) {
     setLoading(true)
 
     const client = clients.find(c => c.id === formData.client_id)
-    
+
     const { data, error } = await invoiceService.createDevis({
       client_id: formData.client_id,
       client_name: client?.name || 'Client',
@@ -155,8 +150,8 @@ export default function DevisForm({ onSuccess, onCancel }: DevisFormProps) {
       revendeur_info: {
         name: user.name,
         email: user.email,
-        phone: '+261 34 00 000 00', // À récupérer du profil
-        address: 'Antananarivo, Madagascar', // À récupérer du profil
+        phone: '+261 34 00 000 00',
+        address: 'Antananarivo, Madagascar',
       },
     })
 
@@ -226,9 +221,7 @@ export default function DevisForm({ onSuccess, onCancel }: DevisFormProps) {
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                   {/* Prix catalogue (lecture seule) */}
                   <div>
-                    <label className="block text-sm text-text-secondary mb-1">
-                      Prix catalogue
-                    </label>
+                    <label className="block text-sm text-text-secondary mb-1">Prix catalogue</label>
                     <input
                       type="number"
                       value={item.prix_catalogue}
@@ -254,9 +247,7 @@ export default function DevisForm({ onSuccess, onCancel }: DevisFormProps) {
 
                   {/* Quantité */}
                   <div>
-                    <label className="block text-sm text-text-secondary mb-1">
-                      Quantité
-                    </label>
+                    <label className="block text-sm text-text-secondary mb-1">Quantité</label>
                     <input
                       type="number"
                       value={item.quantity}
@@ -269,9 +260,7 @@ export default function DevisForm({ onSuccess, onCancel }: DevisFormProps) {
 
                   {/* Total */}
                   <div>
-                    <label className="block text-sm text-text-secondary mb-1">
-                      Total
-                    </label>
+                    <label className="block text-sm text-text-secondary mb-1">Total</label>
                     <div className="px-4 py-2 bg-dark-bg border border-dark-border rounded-lg text-accent-yellow font-bold">
                       {formatPrice(item.prix_vente * item.quantity)}
                     </div>
@@ -282,19 +271,14 @@ export default function DevisForm({ onSuccess, onCancel }: DevisFormProps) {
               {/* Marge preview */}
               {item.product_id && item.prix_vente > item.prix_catalogue && (
                 <div className="text-sm text-green-400">
-                  ✅ Marge unitaire: +{formatPrice(item.prix_vente - item.prix_catalogue)} 
+                  ✅ Marge unitaire: +{formatPrice(item.prix_vente - item.prix_catalogue)}&nbsp;
                   ({((item.prix_vente - item.prix_catalogue) / item.prix_catalogue * 100).toFixed(1)}%)
                 </div>
               )}
 
               {/* Supprimer */}
               {items.length > 1 && (
-                <Button
-                  type="button"
-                  onClick={() => removeItem(index)}
-                  variant="danger"
-                  size="sm"
-                >
+                <Button type="button" onClick={() => removeItem(index)} variant="danger" size="sm">
                   🗑️ Supprimer
                 </Button>
               )}

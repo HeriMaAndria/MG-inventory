@@ -7,7 +7,7 @@
 import { useState, useEffect } from 'react'
 import { invoiceService } from '@/lib/services'
 import { getCurrentUser } from '@/lib/auth/mockAuth'
-import type { Invoice } from '@/lib/types/models'
+import type { Invoice } from '@/lib/types/invoice' // ✅ Fix: bon fichier de types
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
@@ -23,8 +23,10 @@ export default function DevisPage() {
 
   const loadInvoices = async () => {
     setLoading(true)
-    const { data } = await invoiceService.getAll({ revendeur_id: user?.id || 'revendeur-1' })
-    setInvoices(data || [])
+    // ✅ Fix: getAll() ne prend pas d'argument → on filtre côté client
+    const { data } = await invoiceService.getAll()
+    const revendeurId = user?.id || 'revendeur-1'
+    setInvoices((data || []).filter(i => i.revendeur_id === revendeurId))
     setLoading(false)
   }
 
@@ -45,7 +47,7 @@ export default function DevisPage() {
 
   const stats = {
     total: invoices.length,
-    brouillon: invoices.filter(i => i.status === 'brouillon').length,
+    brouillon: invoices.filter(i => i.status === 'en_attente').length,
     en_attente: invoices.filter(i => i.status === 'en_attente').length,
     validee: invoices.filter(i => i.status === 'validée').length,
   }
