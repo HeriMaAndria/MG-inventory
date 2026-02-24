@@ -2,7 +2,6 @@
  * MOCK PRODUCT SERVICE
  * 
  * Implémentation en localStorage qui respecte le contrat IProductService
- * Simule un backend réel avec délais réseau
  */
 
 import type { IProductService } from '../contracts'
@@ -12,7 +11,7 @@ import type {
   UpdateProductInput,
   ProductFilters,
   ApiResponse,
-} from '@/lib/types/models'
+} from '../../types/models'
 
 // Données de test
 const MOCK_PRODUCTS: Product[] = [
@@ -67,7 +66,7 @@ const MOCK_PRODUCTS: Product[] = [
     category: 'accessoires',
     unit: 'lot',
     price: 1500,
-    quantity: 5, // Stock faible
+    quantity: 5,
     purchase_date: '2025-02-05',
     created_at: '2025-02-05T10:00:00Z',
     updated_at: '2025-02-05T10:00:00Z',
@@ -76,7 +75,6 @@ const MOCK_PRODUCTS: Product[] = [
 
 const STORAGE_KEY = 'mg_products'
 
-// Helpers
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
 const loadProducts = (): Product[] => {
@@ -100,15 +98,13 @@ const saveProducts = (products: Product[]) => {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(products))
 }
 
-// Service implémentation
 export const mockProductService: IProductService = {
   async getAll(filters?: ProductFilters): Promise<ApiResponse<Product[]>> {
-    await delay(300) // Simule latence réseau
+    await delay(300)
     
     try {
       let products = loadProducts()
       
-      // Applique les filtres
       if (filters?.search) {
         const search = filters.search.toLowerCase()
         products = products.filter(p =>

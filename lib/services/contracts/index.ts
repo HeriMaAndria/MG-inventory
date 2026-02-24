@@ -2,7 +2,6 @@
  * CONTRATS DE SERVICES
  * 
  * Ces interfaces définissent les méthodes que TOUS les services doivent implémenter
- * Que ce soit mock, Supabase, API Laravel, etc.
  */
 
 import type {
@@ -26,7 +25,7 @@ import type {
   DashboardStats,
   RevendeurStats,
   ApiResponse,
-} from '@/lib/types/models'
+} from '../../types/models'
 
 // ============================================
 // PRODUCT SERVICE
