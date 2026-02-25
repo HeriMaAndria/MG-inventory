@@ -1,5 +1,5 @@
 /**
- * SERVICE INVOICE - MARGE AUTO
+ * SERVICE INVOICE COMPLET - MARGE AUTO
  */
 
 import type { Invoice, InvoiceItem } from '@/lib/types/invoice'
@@ -31,6 +31,7 @@ const saveInvoices = (invoices: Invoice[]) => {
 }
 
 export const invoiceService = {
+  // Créer devis (revendeur)
   async createDevis(data: {
     client_id: string | null
     client_name: string | null
@@ -77,6 +78,7 @@ export const invoiceService = {
     }
   },
 
+  // Convertir devis → facture (gérant)
   async convertDevisToFacture(
     devisId: string,
     type: 'facture' | 'proforma' | 'bon_commande'
@@ -110,6 +112,7 @@ export const invoiceService = {
     }
   },
 
+  // Lire tous
   async getAll(): Promise<{ data: Invoice[] | null; error: string | null }> {
     await delay(200)
     try {
@@ -119,6 +122,7 @@ export const invoiceService = {
     }
   },
 
+  // Lire par ID
   async getById(id: string): Promise<{ data: Invoice | null; error: string | null }> {
     await delay(200)
     try {
@@ -129,23 +133,55 @@ export const invoiceService = {
     }
   },
 
-  async validate(id: string): Promise<{ data: Invoice | null; error: string | null }> {
+  // Mettre à jour
+  async update(
+    id: string,
+    data: Partial<{
+      items: Omit<InvoiceItem, 'total_catalogue' | 'total_vente' | 'marge_unitaire' | 'marge_total'>[]
+      notes: string
+      status: Invoice['status']
+    }>
+  ): Promise<{ data: Invoice | null; error: string | null }> {
     await delay(300)
     try {
       const invoices = loadInvoices()
-      const invoice = invoices.find(i => i.id === id)
-      if (!invoice) return { data: null, error: 'Non trouvé' }
+      const index = invoices.findIndex(i => i.id === id)
       
-      invoice.status = 'validée'
-      invoice.validated_at = new Date().toISOString()
+      if (index === -1) return { data: null, error: 'Non trouvé' }
+
+      // Si items changent, recalculer
+      if (data.items) {
+        const calculatedItems = data.items.map(calculateInvoiceItem)
+        const totals = calculateInvoiceTotals(calculatedItems)
+        
+        invoices[index] = {
+          ...invoices[index],
+          ...data,
+          items: calculatedItems,
+          ...totals,
+        }
+      } else {
+        invoices[index] = {
+          ...invoices[index],
+          ...data,
+        }
+      }
+
       saveInvoices(invoices)
-      
-      return { data: invoice, error: null }
+      return { data: invoices[index], error: null }
     } catch (err: any) {
       return { data: null, error: err.message }
     }
   },
 
+  // Valider
+  async validate(id: string): Promise<{ data: Invoice | null; error: string | null }> {
+    return this.update(id, {
+      status: 'validée',
+    })
+  },
+
+  // Marquer comme payée
   async markAsPaid(id: string): Promise<{ data: Invoice | null; error: string | null }> {
     await delay(300)
     try {
@@ -157,6 +193,66 @@ export const invoiceService = {
       invoice.paid_at = new Date().toISOString()
       saveInvoices(invoices)
       
+      return { data: invoice, error: null }
+    } catch (err: any) {
+      return { data: null, error: err.message }
+    }
+  },
+
+  // Supprimer
+  async delete(id: string): Promise<{ data: boolean; error: string | null }> {
+    await delay(300)
+    try {
+      const invoices = loadInvoices()
+      const filtered = invoices.filter(i => i.id !== id)
+      
+      if (invoices.length === filtered.length) {
+        return { data: false, error: 'Non trouvé' }
+      }
+      
+      saveInvoices(filtered)
+      return { data: true, error: null }
+    } catch (err: any) {
+      return { data: false, error: err.message }
+    }
+  },
+
+  // Créer facture directement (sans passer par devis)
+  async create(data: {
+    client_id: string | null
+    client_name: string | null
+    items: Omit<InvoiceItem, 'total_catalogue' | 'total_vente' | 'marge_unitaire' | 'marge_total'>[]
+    notes?: string
+    type?: 'facture' | 'proforma' | 'bon_commande'
+  }): Promise<{ data: Invoice | null; error: string | null }> {
+    await delay(300)
+    try {
+      const user = getCurrentUser()
+      if (!user) return { data: null, error: 'Non authentifié' }
+
+      const calculatedItems = data.items.map(calculateInvoiceItem)
+      const totals = calculateInvoiceTotals(calculatedItems)
+      
+      const invoice: Invoice = {
+        id: `inv-${Date.now()}`,
+        reference: `${(data.type || 'facture').toUpperCase()}-${String(Date.now()).slice(-6)}`,
+        type: data.type || 'facture',
+        status: 'validée',
+        revendeur_id: user.id,
+        revendeur_name: user.name,
+        client_id: data.client_id,
+        client_name: data.client_name,
+        items: calculatedItems,
+        ...totals,
+        created_at: new Date().toISOString(),
+        validated_at: new Date().toISOString(),
+        notes: data.notes,
+      }
+
+      const invoices = loadInvoices()
+      invoices.push(invoice)
+      saveInvoices(invoices)
+
       return { data: invoice, error: null }
     } catch (err: any) {
       return { data: null, error: err.message }
