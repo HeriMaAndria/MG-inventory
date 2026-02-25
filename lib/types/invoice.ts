@@ -1,5 +1,5 @@
 /**
- * TYPES MIS À JOUR - MARGE AUTOMATIQUE
+ * TYPES INVOICE - SYSTÈME MARGE AUTOMATIQUE
  */
 
 export type InvoiceType = 'devis' | 'facture' | 'proforma' | 'bon_commande'
@@ -10,17 +10,15 @@ export interface InvoiceItem {
   product_name: string
   
   // Prix (2 colonnes)
-  prix_catalogue: number      // Prix base entreprise (fixé par gérant)
-  prix_vente: number          // Prix négocié par revendeur avec client
+  prix_catalogue: number      // Prix base entreprise
+  prix_vente: number          // Prix négocié revendeur
   
   quantity: number
   unit: string
   
-  // Totaux calculés
+  // Totaux calculés auto
   total_catalogue: number     // prix_catalogue × quantity
   total_vente: number         // prix_vente × quantity
-  
-  // Marge calculée automatiquement
   marge_unitaire: number      // prix_vente - prix_catalogue
   marge_total: number         // marge_unitaire × quantity
 }
@@ -34,23 +32,23 @@ export interface Invoice {
   // Acteurs
   revendeur_id: string
   revendeur_name: string
-  client_id: string
-  client_name: string
+  client_id: string | null
+  client_name: string | null
   
   // Articles
   items: InvoiceItem[]
   
   // Totaux
-  subtotal_catalogue: number  // Somme total_catalogue (prix base)
-  subtotal_vente: number      // Somme total_vente (prix final)
+  subtotal_catalogue: number  // Somme total_catalogue
+  subtotal_vente: number      // Somme total_vente
   
-  // Marge (calculée automatiquement)
+  // Marge (calculée auto)
   marge_total: number         // subtotal_vente - subtotal_catalogue
   marge_percentage: number    // (marge_total / subtotal_catalogue) × 100
   
   total: number               // = subtotal_vente
   
-  // Informations revendeur (pour devis uniquement)
+  // Infos revendeur (devis seulement)
   revendeur_info?: {
     name: string
     email: string
@@ -66,11 +64,10 @@ export interface Invoice {
   validated_at?: string
   paid_at?: string
   
-  // Notes
   notes?: string
 }
 
-// Helpers de calcul
+// Helpers calcul
 export function calculateInvoiceItem(item: Omit<InvoiceItem, 'total_catalogue' | 'total_vente' | 'marge_unitaire' | 'marge_total'>): InvoiceItem {
   const total_catalogue = item.prix_catalogue * item.quantity
   const total_vente = item.prix_vente * item.quantity

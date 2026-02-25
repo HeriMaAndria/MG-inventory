@@ -1,8 +1,5 @@
 /**
  * MODÈLES DE DONNÉES - MG INVENTORY
- * 
- * Ces types définissent la structure exacte des données
- * Compatible avec Supabase ou toute autre base SQL
  */
 
 // ============================================
@@ -11,7 +8,6 @@
 
 export type UserRole = 'admin' | 'gerant' | 'revendeur'
 export type ProductCategory = 'tôles' | 'accessoires' | 'panne C' | 'autres'
-export type InvoiceStatus = 'brouillon' | 'en_attente' | 'validée' | 'payée' | 'annulée'
 export type OrderStatus = 'en_attente' | 'validée' | 'refusée' | 'commandée' | 'livrée' | 'payée' | 'retournée'
 
 // ============================================
@@ -37,7 +33,7 @@ export interface Product {
   description: string | null
   couleur: string | null
   category: ProductCategory
-  unit: string // m², kg, pièce, sac, etc.
+  unit: string
   price: number
   quantity: number
   purchase_date: string | null
@@ -97,73 +93,34 @@ export interface UpdateClientInput extends Partial<CreateClientInput> {
 }
 
 // ============================================
-// INVOICES (FACTURES)
+// INVOICES - RE-EXPORT depuis invoice.ts
 // ============================================
 
-export interface InvoiceItem {
+export type {
+  Invoice,
+  InvoiceItem,
+  InvoiceType,
+  InvoiceStatus
+} from './invoice'
+
+// ============================================
+// ORDERS
+// ============================================
+
+export interface OrderItem {
   product_id: string
-  product_name: string // Dénormalisé pour affichage
+  product_name: string
   quantity: number
   unit_price: number
   total: number
 }
 
-export interface Invoice {
-  id: string
-  reference: string // INV-001, INV-002, etc.
-  revendeur_id: string
-  revendeur_name: string // Dénormalisé
-  client_id: string | null
-  client_name: string | null // Dénormalisé
-  items: InvoiceItem[]
-  subtotal: number // Somme des items
-  marge_percentage: number // Marge du revendeur
-  marge_amount: number // Montant de la marge
-  total: number // Subtotal + marge
-  status: InvoiceStatus
-  notes: string | null
-  created_at: string
-  updated_at: string
-  validated_at: string | null
-  paid_at: string | null
-}
-
-export interface CreateInvoiceInput {
-  revendeur_id: string
-  client_id?: string
-  client_name?: string
-  items: {
-    product_id: string
-    quantity: number
-    unit_price: number
-  }[]
-  marge_percentage: number
-  notes?: string
-}
-
-export interface UpdateInvoiceInput extends Partial<CreateInvoiceInput> {
-  id: string
-  status?: InvoiceStatus
-}
-
-export interface InvoiceFilters {
-  search?: string // Recherche par référence ou client
-  revendeur_id?: string
-  status?: InvoiceStatus
-  date_from?: string
-  date_to?: string
-}
-
-// ============================================
-// ORDERS (COMMANDES)
-// ============================================
-
 export interface Order {
   id: string
-  reference: string // CMD-001, CMD-002, etc.
+  reference: string
   revendeur_id: string
   revendeur_name: string
-  items: InvoiceItem[] // Même structure que facture
+  items: OrderItem[]
   total: number
   status: OrderStatus
   notes: string | null
@@ -198,31 +155,7 @@ export interface OrderFilters {
 }
 
 // ============================================
-// STOCK MOVEMENTS (MOUVEMENTS DE STOCK)
-// ============================================
-
-export interface StockMovement {
-  id: string
-  product_id: string
-  product_name: string
-  type: 'entrée' | 'sortie' | 'ajustement'
-  quantity: number // Positif pour entrée, négatif pour sortie
-  reason: string // "Achat", "Vente", "Retour", "Inventaire", etc.
-  user_id: string
-  user_name: string
-  created_at: string
-}
-
-export interface CreateStockMovementInput {
-  product_id: string
-  type: 'entrée' | 'sortie' | 'ajustement'
-  quantity: number
-  reason: string
-  user_id: string
-}
-
-// ============================================
-// STATISTICS (POUR DASHBOARDS)
+// STATISTICS
 // ============================================
 
 export interface DashboardStats {
