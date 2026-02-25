@@ -1,8 +1,8 @@
 /**
- * TYPES DE DONNÉES PRINCIPAUX
+ * MODÈLES DE DONNÉES - MG INVENTORY
  * 
- * Note: Invoice est maintenant dans invoice.ts pour supporter
- * le système de marge automatique (2 prix par produit)
+ * Ces types définissent la structure exacte des données
+ * Compatible avec Supabase ou toute autre base SQL
  */
 
 // ============================================
@@ -10,40 +10,62 @@
 // ============================================
 
 export type UserRole = 'admin' | 'gerant' | 'revendeur'
+export type ProductCategory = 'tôles' | 'accessoires' | 'panne C' | 'autres'
+export type OrderStatus = 'en_attente' | 'validée' | 'refusée' | 'commandée' | 'livrée' | 'payée' | 'retournée'
 
 // ============================================
-// PRODUITS
+// USER & AUTH
+// ============================================
+
+export interface User {
+  id: string
+  email: string
+  role: UserRole
+  full_name: string
+  created_at: string
+}
+
+// ============================================
+// PRODUCTS
 // ============================================
 
 export interface Product {
   id: string
-  reference: string // REF-001, REF-002, etc.
+  reference: string | null
   name: string
   description: string | null
-  category: string
-  color: string | null
-  unit: string // m², kg, pièce, etc.
-  price: number // Prix de base (catalogue entreprise)
-  stock: number
-  stock_min: number
+  couleur: string | null
+  category: ProductCategory
+  unit: string // m², kg, pièce, sac, etc.
+  price: number
+  quantity: number
+  purchase_date: string | null
   created_at: string
   updated_at: string
 }
-export type ProductCategory = 'tôle' | 'bardage' | 'accessoires' | 'visserie' | 'autre'
+
 export interface CreateProductInput {
-  reference: string
+  reference?: string
   name: string
   description?: string
-  category: string
-  color?: string
+  couleur?: string
+  category: ProductCategory
   unit: string
   price: number
-  stock: number
-  stock_min: number
+  quantity: number
+  purchase_date?: string
 }
 
 export interface UpdateProductInput extends Partial<CreateProductInput> {
   id: string
+}
+
+export interface ProductFilters {
+  search?: string // Recherche par nom ou référence
+  category?: ProductCategory
+  min_price?: number
+  max_price?: number
+  in_stock?: boolean // Filtre produits en stock uniquement
 }
 
 // ============================================
@@ -52,7 +74,7 @@ export interface UpdateProductInput extends Partial<CreateProductInput> {
 
 export interface Client {
   id: string
-  revendeur_id: string
+  revendeur_id: string // Lien vers le revendeur propriétaire
   name: string
   email: string | null
   phone: string | null
@@ -73,11 +95,19 @@ export interface UpdateClientInput extends Partial<CreateClientInput> {
   id: string
 }
 
+export interface ClientFilters {
+  search?: string // Recherche par nom, email ou téléphone
+  revendeur_id?: string
+}
+
 // ============================================
-// INVOICES - RE-EXPORT depuis invoice.ts
+// INVOICES - RE-EXPORT DEPUIS invoice.ts
 // ============================================
 
-// ✅ Source unique de vérité pour éviter les doublons
+/**
+ * Les types Invoice sont maintenant dans invoice.ts
+ * pour supporter le système de marge automatique avec 2 prix
+ */
 export type {
   Invoice,
   InvoiceItem,
@@ -86,14 +116,12 @@ export type {
 } from './invoice'
 
 // ============================================
-// COMMANDES
+// ORDERS (COMMANDES)
 // ============================================
-
-export type OrderStatus = 'en_attente' | 'validée' | 'refusée' | 'commandée' | 'livrée' | 'payée' | 'retournée'
 
 export interface OrderItem {
   product_id: string
-  product_name: string
+  product_name: string // Dénormalisé
   quantity: number
   unit_price: number
   total: number
@@ -103,58 +131,52 @@ export interface Order {
   id: string
   reference: string
   revendeur_id: string
-  revendeur_name: string
+  revendeur_name: string // Dénormalisé
   items: OrderItem[]
   total: number
   status: OrderStatus
   notes: string | null
   created_at: string
   validated_at: string | null
+  refused_at: string | null
+  ordered_at: string | null
   delivered_at: string | null
   paid_at: string | null
+  returned_at: string | null
 }
 
 export interface CreateOrderInput {
   revendeur_id: string
-  items: Omit<OrderItem, 'product_name'>[]
+  items: {
+    product_id: string
+    quantity: number
+    unit_price: number
+  }[]
   notes?: string
 }
 
-// ============================================
-// UTILISATEURS
-// ============================================
-
-export interface User {
+export interface UpdateOrderInput extends Partial<CreateOrderInput> {
   id: string
-  email: string
-  name: string
-  role: UserRole
-  active: boolean
-  created_at: string
+  status?: OrderStatus
 }
 
-export interface CreateUserInput {
-  email: string
-  password: string
-  name: string
-  role: UserRole
-}
-
-export interface UpdateUserInput {
-  id: string
-  name?: string
-  role?: UserRole
-  active?: boolean
+export interface OrderFilters {
+  search?: string // Recherche par référence
+  revendeur_id?: string
+  status?: OrderStatus
+  date_from?: string
+  date_to?: string
 }
 
 // ============================================
-// STATISTIQUES
+// STATS
 // ============================================
 
 export interface DashboardStats {
   total_products: number
   total_clients: number
   total_orders: number
+  total_invoices: number
   total_revenue: number
   pending_orders: number
   low_stock_products: number
@@ -170,4 +192,11 @@ export interface TopProduct {
   product_name: string
   quantity_sold: number
   revenue: number
+}
+
+export interface TopClient {
+  client_id: string
+  client_name: string
+  total_orders: number
+  total_revenue: number
 }
