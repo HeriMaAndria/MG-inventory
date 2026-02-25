@@ -29,7 +29,7 @@ export interface Product {
   created_at: string
   updated_at: string
 }
-
+export type ProductCategory = 'tôle' | 'bardage' | 'accessoires' | 'visserie' | 'autre'
 export interface CreateProductInput {
   reference: string
   name: string
