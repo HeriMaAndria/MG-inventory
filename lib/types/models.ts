@@ -11,6 +11,7 @@
 
 export type UserRole = 'admin' | 'gerant' | 'revendeur'
 export type ProductCategory = 'tôles' | 'accessoires' | 'panne C' | 'autres'
+export type InvoiceStatus = 'brouillon' | 'en_attente' | 'validée' | 'payée' | 'annulée'
 export type OrderStatus = 'en_attente' | 'validée' | 'refusée' | 'commandée' | 'livrée' | 'payée' | 'retournée'
 
 // ============================================
@@ -61,11 +62,11 @@ export interface UpdateProductInput extends Partial<CreateProductInput> {
 }
 
 export interface ProductFilters {
-  search?: string // Recherche par nom ou référence
+  search?: string
   category?: ProductCategory
-  min_price?: number
-  max_price?: number
-  in_stock?: boolean // Filtre produits en stock uniquement
+  couleur?: string
+  minQuantity?: number
+  maxQuantity?: number
 }
 
 // ============================================
@@ -74,7 +75,7 @@ export interface ProductFilters {
 
 export interface Client {
   id: string
-  revendeur_id: string // Lien vers le revendeur propriétaire
+  revendeur_id: string
   name: string
   email: string | null
   phone: string | null
@@ -95,54 +96,82 @@ export interface UpdateClientInput extends Partial<CreateClientInput> {
   id: string
 }
 
-export interface ClientFilters {
-  search?: string // Recherche par nom, email ou téléphone
-  revendeur_id?: string
-}
-
 // ============================================
-// INVOICES - RE-EXPORT DEPUIS invoice.ts
+// INVOICES (FACTURES)
 // ============================================
 
-/**
- * Les types Invoice sont maintenant dans invoice.ts
- * pour supporter le système de marge automatique avec 2 prix
- */
-export type {
-  Invoice,
-  InvoiceItem,
-  InvoiceType,
-  InvoiceStatus
-} from './invoice'
-
-// ============================================
-// ORDERS (COMMANDES)
-// ============================================
-
-export interface OrderItem {
+export interface InvoiceItem {
   product_id: string
-  product_name: string // Dénormalisé
+  product_name: string // Dénormalisé pour affichage
   quantity: number
   unit_price: number
   total: number
 }
 
-export interface Order {
+export interface Invoice {
   id: string
-  reference: string
+  reference: string // INV-001, INV-002, etc.
   revendeur_id: string
   revendeur_name: string // Dénormalisé
-  items: OrderItem[]
+  client_id: string | null
+  client_name: string | null // Dénormalisé
+  items: InvoiceItem[]
+  subtotal: number // Somme des items
+  marge_percentage: number // Marge du revendeur
+  marge_amount: number // Montant de la marge
+  total: number // Subtotal + marge
+  status: InvoiceStatus
+  notes: string | null
+  created_at: string
+  updated_at: string
+  validated_at: string | null
+  paid_at: string | null
+}
+
+export interface CreateInvoiceInput {
+  revendeur_id: string
+  client_id?: string
+  client_name?: string
+  items: {
+    product_id: string
+    quantity: number
+    unit_price: number
+  }[]
+  marge_percentage: number
+  notes?: string
+}
+
+export interface UpdateInvoiceInput extends Partial<CreateInvoiceInput> {
+  id: string
+  status?: InvoiceStatus
+}
+
+export interface InvoiceFilters {
+  search?: string // Recherche par référence ou client
+  revendeur_id?: string
+  status?: InvoiceStatus
+  date_from?: string
+  date_to?: string
+}
+
+// ============================================
+// ORDERS (COMMANDES)
+// ============================================
+
+export interface Order {
+  id: string
+  reference: string // CMD-001, CMD-002, etc.
+  revendeur_id: string
+  revendeur_name: string
+  items: InvoiceItem[] // Même structure que facture
   total: number
   status: OrderStatus
   notes: string | null
   created_at: string
+  updated_at: string
   validated_at: string | null
-  refused_at: string | null
-  ordered_at: string | null
   delivered_at: string | null
   paid_at: string | null
-  returned_at: string | null
 }
 
 export interface CreateOrderInput {
@@ -161,7 +190,7 @@ export interface UpdateOrderInput extends Partial<CreateOrderInput> {
 }
 
 export interface OrderFilters {
-  search?: string // Recherche par référence
+  search?: string
   revendeur_id?: string
   status?: OrderStatus
   date_from?: string
@@ -169,34 +198,71 @@ export interface OrderFilters {
 }
 
 // ============================================
-// STATS
+// STOCK MOVEMENTS (MOUVEMENTS DE STOCK)
+// ============================================
+
+export interface StockMovement {
+  id: string
+  product_id: string
+  product_name: string
+  type: 'entrée' | 'sortie' | 'ajustement'
+  quantity: number // Positif pour entrée, négatif pour sortie
+  reason: string // "Achat", "Vente", "Retour", "Inventaire", etc.
+  user_id: string
+  user_name: string
+  created_at: string
+}
+
+export interface CreateStockMovementInput {
+  product_id: string
+  type: 'entrée' | 'sortie' | 'ajustement'
+  quantity: number
+  reason: string
+  user_id: string
+}
+
+// ============================================
+// STATISTICS (POUR DASHBOARDS)
 // ============================================
 
 export interface DashboardStats {
   total_products: number
-  total_clients: number
-  total_orders: number
-  total_invoices: number
-  total_revenue: number
+  total_stock_value: number
+  low_stock_count: number
   pending_orders: number
-  low_stock_products: number
+  total_revenue_month: number
+  total_orders_month: number
 }
 
-export interface RevenueByMonth {
-  month: string
-  revenue: number
+export interface RevendeurStats {
+  total_clients: number
+  total_revenue_month: number
+  pending_quotes: number
+  total_orders_month: number
+  top_clients: {
+    name: string
+    total: number
+    orders_count: number
+  }[]
+  top_products: {
+    name: string
+    sales_count: number
+  }[]
 }
 
-export interface TopProduct {
-  product_id: string
-  product_name: string
-  quantity_sold: number
-  revenue: number
+// ============================================
+// API RESPONSES
+// ============================================
+
+export interface ApiResponse<T> {
+  data: T | null
+  error: string | null
 }
 
-export interface TopClient {
-  client_id: string
-  client_name: string
-  total_orders: number
-  total_revenue: number
+export interface PaginatedResponse<T> {
+  data: T[]
+  total: number
+  page: number
+  per_page: number
+  total_pages: number
 }
