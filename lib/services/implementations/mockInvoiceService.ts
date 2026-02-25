@@ -3,7 +3,7 @@
  * ✅ Implémente IInvoiceService pour garantir la conformité TypeScript
  */
 
-import type { Invoice, InvoiceItem } from '@/lib/types/invoice'
+import type { Invoice, InvoiceItem, CreateInvoiceInput, UpdateInvoiceInput, InvoiceFilters } from '@/lib/types/invoice'
 import { calculateInvoiceItem, calculateInvoiceTotals } from '@/lib/types/invoice'
 import { getCurrentUser } from '@/lib/auth/mockAuth'
 import type { IInvoiceService } from '../contracts'
@@ -132,10 +132,34 @@ export const invoiceService: IInvoiceService & {
   },
 
   // Lire tous
-  async getAll(): Promise<{ data: Invoice[] | null; error: string | null }> {
+  async getAll(filters?: InvoiceFilters): Promise<{ data: Invoice[] | null; error: string | null }> {
     await delay(200)
     try {
-      return { data: loadInvoices(), error: null }
+      let invoices = loadInvoices()
+      
+      // Appliquer les filtres si présents
+      if (filters) {
+        if (filters.revendeur_id) {
+          invoices = invoices.filter(i => i.revendeur_id === filters.revendeur_id)
+        }
+        if (filters.client_id) {
+          invoices = invoices.filter(i => i.client_id === filters.client_id)
+        }
+        if (filters.type) {
+          invoices = invoices.filter(i => i.type === filters.type)
+        }
+        if (filters.status) {
+          invoices = invoices.filter(i => i.status === filters.status)
+        }
+        if (filters.from_date) {
+          invoices = invoices.filter(i => i.created_at >= filters.from_date!)
+        }
+        if (filters.to_date) {
+          invoices = invoices.filter(i => i.created_at <= filters.to_date!)
+        }
+      }
+      
+      return { data: invoices, error: null }
     } catch (err: any) {
       return { data: null, error: err.message }
     }
@@ -153,18 +177,11 @@ export const invoiceService: IInvoiceService & {
   },
 
   // Mettre à jour
-  async update(
-    id: string,
-    data: Partial<{
-      items: Omit<InvoiceItem, 'total_catalogue' | 'total_vente' | 'marge_unitaire' | 'marge_total'>[]
-      notes: string
-      status: Invoice['status']
-    }>
-  ): Promise<{ data: Invoice | null; error: string | null }> {
+  async update(data: UpdateInvoiceInput): Promise<{ data: Invoice | null; error: string | null }> {
     await delay(300)
     try {
       const invoices = loadInvoices()
-      const index = invoices.findIndex(i => i.id === id)
+      const index = invoices.findIndex(i => i.id === data.id)
       
       if (index === -1) return { data: null, error: 'Non trouvé' }
 
@@ -195,7 +212,8 @@ export const invoiceService: IInvoiceService & {
 
   // Valider
   async validate(id: string): Promise<{ data: Invoice | null; error: string | null }> {
-    return this.update(id, {
+    return this.update({
+      id,
       status: 'validée',
     })
   },
@@ -237,13 +255,7 @@ export const invoiceService: IInvoiceService & {
   },
 
   // Créer facture directement (sans passer par devis)
-  async create(data: {
-    client_id: string | null
-    client_name: string | null
-    items: Omit<InvoiceItem, 'total_catalogue' | 'total_vente' | 'marge_unitaire' | 'marge_total'>[]
-    notes?: string
-    type?: 'facture' | 'proforma' | 'bon_commande'
-  }): Promise<{ data: Invoice | null; error: string | null }> {
+  async create(data: CreateInvoiceInput): Promise<{ data: Invoice | null; error: string | null }> {
     await delay(300)
     try {
       const user = getCurrentUser()

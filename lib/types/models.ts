@@ -100,7 +100,10 @@ export type {
   Invoice,
   InvoiceItem,
   InvoiceType,
-  InvoiceStatus
+  InvoiceStatus,
+  CreateInvoiceInput,
+  UpdateInvoiceInput,
+  InvoiceFilters
 } from './invoice'
 
 // ============================================

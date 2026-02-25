@@ -67,6 +67,38 @@ export interface Invoice {
   notes?: string
 }
 
+// ============================================
+// TYPES INPUT & FILTERS
+// ============================================
+
+export interface CreateInvoiceInput {
+  client_id: string | null
+  client_name: string | null
+  items: Omit<InvoiceItem, 'total_catalogue' | 'total_vente' | 'marge_unitaire' | 'marge_total'>[]
+  notes?: string
+  type?: InvoiceType
+}
+
+export interface UpdateInvoiceInput {
+  id: string
+  items?: Omit<InvoiceItem, 'total_catalogue' | 'total_vente' | 'marge_unitaire' | 'marge_total'>[]
+  notes?: string
+  status?: InvoiceStatus
+}
+
+export interface InvoiceFilters {
+  revendeur_id?: string
+  client_id?: string
+  type?: InvoiceType
+  status?: InvoiceStatus
+  from_date?: string
+  to_date?: string
+}
+
+// ============================================
+// HELPERS CALCUL
+// ============================================
+
 // Helpers calcul
 export function calculateInvoiceItem(item: Omit<InvoiceItem, 'total_catalogue' | 'total_vente' | 'marge_unitaire' | 'marge_total'>): InvoiceItem {
   const total_catalogue = item.prix_catalogue * item.quantity
