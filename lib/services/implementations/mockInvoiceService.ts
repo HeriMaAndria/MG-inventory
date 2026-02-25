@@ -1,10 +1,12 @@
 /**
  * SERVICE INVOICE COMPLET - MARGE AUTO
+ * ✅ Implémente IInvoiceService pour garantir la conformité TypeScript
  */
 
 import type { Invoice, InvoiceItem } from '@/lib/types/invoice'
 import { calculateInvoiceItem, calculateInvoiceTotals } from '@/lib/types/invoice'
 import { getCurrentUser } from '@/lib/auth/mockAuth'
+import type { IInvoiceService } from '../contracts'
 
 const STORAGE_KEY = 'mg_invoices'
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
@@ -30,7 +32,24 @@ const saveInvoices = (invoices: Invoice[]) => {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(invoices))
 }
 
-export const invoiceService = {
+export const invoiceService: IInvoiceService & {
+  createDevis: (data: {
+    client_id: string | null
+    client_name: string | null
+    items: Omit<InvoiceItem, 'total_catalogue' | 'total_vente' | 'marge_unitaire' | 'marge_total'>[]
+    notes?: string
+    revendeur_info: {
+      name: string
+      email: string
+      phone: string
+      address: string
+    }
+  }) => Promise<{ data: Invoice | null; error: string | null }>
+  convertDevisToFacture: (
+    devisId: string,
+    type: 'facture' | 'proforma' | 'bon_commande'
+  ) => Promise<{ data: Invoice | null; error: string | null }>
+} = {
   // Créer devis (revendeur)
   async createDevis(data: {
     client_id: string | null
@@ -200,20 +219,20 @@ export const invoiceService = {
   },
 
   // Supprimer
-  async delete(id: string): Promise<{ data: boolean; error: string | null }> {
+  async delete(id: string): Promise<{ data: void | null; error: string | null }> {
     await delay(300)
     try {
       const invoices = loadInvoices()
       const filtered = invoices.filter(i => i.id !== id)
       
       if (invoices.length === filtered.length) {
-        return { data: false, error: 'Non trouvé' }
+        return { data: null, error: 'Non trouvé' }
       }
       
       saveInvoices(filtered)
-      return { data: true, error: null }
+      return { data: null, error: null } // ✅ Void retourne null au lieu de boolean
     } catch (err: any) {
-      return { data: false, error: err.message }
+      return { data: null, error: err.message }
     }
   },
 
@@ -254,6 +273,22 @@ export const invoiceService = {
       saveInvoices(invoices)
 
       return { data: invoice, error: null }
+    } catch (err: any) {
+      return { data: null, error: err.message }
+    }
+  },
+
+  // Générer PDF (implémentation minimale pour respecter le contrat)
+  async generatePDF(id: string): Promise<{ data: Blob | null; error: string | null }> {
+    await delay(300)
+    try {
+      const invoice = loadInvoices().find(i => i.id === id)
+      if (!invoice) return { data: null, error: 'Non trouvé' }
+      
+      // TODO: Implémenter la génération PDF réelle
+      // Pour l'instant, retourner un blob vide
+      const blob = new Blob(['PDF en cours de développement'], { type: 'application/pdf' })
+      return { data: blob, error: null }
     } catch (err: any) {
       return { data: null, error: err.message }
     }
