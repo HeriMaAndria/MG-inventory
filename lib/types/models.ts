@@ -158,6 +158,37 @@ export interface OrderFilters {
 }
 
 // ============================================
+// STOCK MOVEMENTS
+// ============================================
+
+export type StockMovementType = 'entree' | 'sortie' | 'ajustement' | 'retour'
+
+export interface StockMovement {
+  id: string
+  product_id: string
+  product_name: string
+  type: StockMovementType
+  quantity: number
+  previous_quantity: number
+  new_quantity: number
+  reason: string | null
+  reference: string | null // Référence commande/facture si applicable
+  user_id: string
+  user_name: string
+  created_at: string
+  notes?: string
+}
+
+export interface CreateStockMovementInput {
+  product_id: string
+  type: StockMovementType
+  quantity: number
+  reason?: string
+  reference?: string
+  notes?: string
+}
+
+// ============================================
 // STATISTICS
 // ============================================
 
