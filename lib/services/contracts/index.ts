@@ -1,6 +1,5 @@
 /**
- * CONTRATS DE SERVICES - CORRIGÉ
- * Import Invoice depuis invoice.ts
+ * CONTRATS DE SERVICES - COMPLET
  */
 
 import type {
@@ -20,14 +19,21 @@ import type {
   ApiResponse,
 } from '../../types/models'
 
-// Import Invoice depuis invoice.ts (nouveau système)
 import type {
   Invoice,
+  InvoiceItem,
 } from '../../types/invoice'
 
 // ============================================
-// INVOICE SERVICE (SIMPLIFIÉ)
+// INVOICE SERVICE - TOUTES LES MÉTHODES
 // ============================================
+
+export interface UpdateInvoiceInput {
+  id: string
+  items?: Omit<InvoiceItem, 'total_catalogue' | 'total_vente' | 'marge_unitaire' | 'marge_total'>[]
+  notes?: string
+  status?: Invoice['status']
+}
 
 export interface IInvoiceService {
   getAll(): Promise<{ data: Invoice[] | null; error: string | null }>
@@ -35,6 +41,7 @@ export interface IInvoiceService {
   validate(id: string): Promise<{ data: Invoice | null; error: string | null }>
   markAsPaid(id: string): Promise<{ data: Invoice | null; error: string | null }>
   delete(id: string): Promise<{ data: void | null; error: string | null }>
+  update(data: UpdateInvoiceInput): Promise<{ data: Invoice | null; error: string | null }>
 }
 
 // ============================================
