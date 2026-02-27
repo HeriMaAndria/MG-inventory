@@ -1,7 +1,6 @@
 /**
- * CONTRATS DE SERVICES
- * 
- * Ces interfaces définissent les méthodes que TOUS les services doivent implémenter
+ * CONTRATS DE SERVICES - CORRIGÉ
+ * Import Invoice depuis invoice.ts
  */
 
 import type {
@@ -12,20 +11,31 @@ import type {
   Client,
   CreateClientInput,
   UpdateClientInput,
-  Invoice,
-  CreateInvoiceInput,
-  UpdateInvoiceInput,
-  InvoiceFilters,
   Order,
   CreateOrderInput,
   UpdateOrderInput,
   OrderFilters,
-  StockMovement,
-  CreateStockMovementInput,
   DashboardStats,
   RevendeurStats,
   ApiResponse,
 } from '../../types/models'
+
+// Import Invoice depuis invoice.ts (nouveau système)
+import type {
+  Invoice,
+} from '../../types/invoice'
+
+// ============================================
+// INVOICE SERVICE (SIMPLIFIÉ)
+// ============================================
+
+export interface IInvoiceService {
+  getAll(): Promise<{ data: Invoice[] | null; error: string | null }>
+  getById(id: string): Promise<{ data: Invoice | null; error: string | null }>
+  validate(id: string): Promise<{ data: Invoice | null; error: string | null }>
+  markAsPaid(id: string): Promise<{ data: Invoice | null; error: string | null }>
+  delete(id: string): Promise<{ data: void | null; error: string | null }>
+}
 
 // ============================================
 // PRODUCT SERVICE
@@ -53,21 +63,6 @@ export interface IClientService {
 }
 
 // ============================================
-// INVOICE SERVICE
-// ============================================
-
-export interface IInvoiceService {
-  getAll(filters?: InvoiceFilters): Promise<ApiResponse<Invoice[]>>
-  getById(id: string): Promise<ApiResponse<Invoice>>
-  create(data: CreateInvoiceInput): Promise<ApiResponse<Invoice>>
-  update(data: UpdateInvoiceInput): Promise<ApiResponse<Invoice>>
-  delete(id: string): Promise<ApiResponse<void>>
-  validate(id: string): Promise<ApiResponse<Invoice>>
-  markAsPaid(id: string): Promise<ApiResponse<Invoice>>
-  generatePDF(id: string): Promise<ApiResponse<Blob>>
-}
-
-// ============================================
 // ORDER SERVICE
 // ============================================
 
@@ -78,15 +73,6 @@ export interface IOrderService {
   update(data: UpdateOrderInput): Promise<ApiResponse<Order>>
   delete(id: string): Promise<ApiResponse<void>>
   updateStatus(id: string, status: Order['status']): Promise<ApiResponse<Order>>
-}
-
-// ============================================
-// STOCK MOVEMENT SERVICE
-// ============================================
-
-export interface IStockMovementService {
-  getAll(productId?: string): Promise<ApiResponse<StockMovement[]>>
-  create(data: CreateStockMovementInput): Promise<ApiResponse<StockMovement>>
 }
 
 // ============================================
